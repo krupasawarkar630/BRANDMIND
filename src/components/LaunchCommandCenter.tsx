@@ -8,6 +8,7 @@ import {
   Palette, Megaphone, MessageSquare, Globe, CornerDownRight, X, Sparkles
 } from 'lucide-react';
 import BrandConstitutionModal from '@/components/BrandConstitutionModal';
+import { toast } from '@/lib/toast';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -100,6 +101,7 @@ function CommandCardTile({
   const handleCopy = () => {
     navigator.clipboard.writeText(flatText);
     setCopied(true);
+    toast.success(`Copied ${card.label} to clipboard.`, 'Module Copied');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -605,7 +607,7 @@ export default function LaunchCommandCenter() {
             <ExportBtn icon={exportCopied ? <Check size={12} /> : <FileText size={12} />} label={exportCopied ? 'Copied!' : 'Copy Markdown'} onClick={handleCopyAll} active={exportCopied} />
             <ExportBtn icon={<FileJson size={12} />} label="Export JSON" onClick={handleExportJSON} />
             <ExportBtn icon={<Download size={12} />} label="Print / PDF" onClick={() => window.print()} />
-            <ExportBtn icon={<Share2 size={12} />} label="Share Link" onClick={() => { navigator.clipboard.writeText(`https://brandmind.app/share/${project.id}`); alert('Share link copied!'); }} />
+            <ExportBtn icon={<Share2 size={12} />} label="Share Link" onClick={() => { navigator.clipboard.writeText(`https://brandmind.app/share/${project.id}`); toast.success('Share link copied to clipboard.', 'Link Copied'); }} />
           </div>
         </div>
       </div>

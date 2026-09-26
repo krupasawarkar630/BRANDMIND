@@ -3,6 +3,7 @@
 import { useStore } from '@/lib/store';
 import BrandEvolutionMap from '@/components/BrandEvolutionMap';
 import Header from '@/components/Header';
+import ToastContainer from '@/components/ToastContainer';
 import IdeaStage from '@/components/stages/IdeaStage';
 import BlindSpotsStage from '@/components/stages/BlindSpotsStage';
 import DNAStage from '@/components/stages/DNAStage';
@@ -76,6 +77,7 @@ export default function WorkspacePage() {
           {renderStage()}
         </main>
       </div>
+      <ToastContainer />
     </div>
   );
 }

@@ -3,37 +3,26 @@
 import { useStore } from '@/lib/store';
 import { aiProvider } from '@/lib/ai-provider';
 import { useState } from 'react';
-import { ArrowRight, AlertTriangle, CheckCircle, Wand2 } from 'lucide-react';
+import { ArrowRight, AlertTriangle, CheckCircle, Wand2, Shield, Sparkles, FileText } from 'lucide-react';
 import GuardianScanner from '@/components/GuardianScanner';
 import StageEmptyState from '@/components/StageEmptyState';
+import AsyncProgressState from '@/components/AsyncProgressState';
+import { toast } from '@/lib/toast';
 
-function ScoreRing({ value, label }: { value: number; label: string }) {
-  return (
-    <div style={{ textAlign: 'center' }}>
-      <div style={{ position: 'relative', width: '64px', height: '64px', margin: '0 auto 8px' }}>
-        <svg width="64" height="64" viewBox="0 0 64 64">
-          <circle cx="32" cy="32" r="26" fill="none" stroke="var(--border)" strokeWidth="4" />
-          <circle
-            cx="32" cy="32" r="26"
-            fill="none"
-            stroke="var(--accent)"
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeDasharray={`${2 * Math.PI * 26}`}
-            strokeDashoffset={`${2 * Math.PI * 26 * (1 - value / 100)}`}
-            style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', transition: 'stroke-dashoffset 1s ease' }}
-          />
-        </svg>
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>{value}</span>
-        </div>
-      </div>
-      <p style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-        {label}
-      </p>
-    </div>
-  );
-}
+const EXAMPLE_SNIPPETS = [
+  {
+    name: 'Generic SaaS Pitch',
+    text: 'We leverage cutting-edge AI synergy to empower modern teams to unlock frictionless hyper-growth seamlessly.',
+  },
+  {
+    name: 'Off-Brand Casual Copy',
+    text: 'Yo check this out! Build cool stuff fast without any stress or boring setup. Guaranteed 10x results!',
+  },
+  {
+    name: 'Aligned Direct Copy',
+    text: 'Stop stitching together chaotic group chats. Find high-intent teammates ready to ship at the next hackathon.',
+  },
+];
 
 export default function GuardianStage() {
   const { project, setGuardian, fixGuardianViolation, setLaunchKit, markStageComplete } = useStore();
@@ -41,6 +30,7 @@ export default function GuardianStage() {
   const dna = project.brandDNA;
   const [content, setContent] = useState('');
   const [checking, setChecking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState(project.guardian || null);
   const [nextLoading, setNextLoading] = useState(false);
 
@@ -50,11 +40,21 @@ export default function GuardianStage() {
 
   const handleCheck = async () => {
     if (!content.trim()) return;
+    setError(null);
     setChecking(true);
     try {
       const r = await aiProvider.checkConsistency(content, system, dna, project.brandDnaLocked);
       setResult(r);
       setGuardian(r);
+      if (r.violations.length === 0) {
+        toast.success('Copy is 100% compliant with locked Brand DNA.', 'Scan Passed');
+      } else {
+        toast.warning(`Detected ${r.violations.length} rule deviations.`, 'Violations Found');
+      }
+    } catch (e: any) {
+      console.error(e);
+      setError(e?.message || 'Failed to scan copy against guardian rules.');
+      toast.error('Guardian scan failed.', 'Scan Error');
     } finally {
       setChecking(false);
     }
@@ -63,88 +63,175 @@ export default function GuardianStage() {
   const handleFix = (violationId: string, fixedContent: string) => {
     fixGuardianViolation(violationId);
     setContent(fixedContent);
-    // Locally update the result to hide the fixed violation
+    toast.success('Applied AI fix. Content aligned with Brand DNA.', 'Violation Fixed');
     if (result) {
       setResult({
         ...result,
-        violations: result.violations.map(v => v.id === violationId ? { ...v, status: 'fixed' as const } : v)
+        violations: result.violations.map((v) =>
+          v.id === violationId ? { ...v, status: 'fixed' as const } : v
+        ),
       });
     }
   };
 
   const handleNext = async () => {
     if (!project.worlds || !project.selectedWorldId) return;
-    const world = project.worlds.find(w => w.id === project.selectedWorldId)!;
+    const world = project.worlds.find((w) => w.id === project.selectedWorldId)!;
+    setError(null);
     setNextLoading(true);
     try {
       const lk = await aiProvider.generateLaunchKit(system, world, dna);
       setLaunchKit(lk);
+      toast.success('Generated full Launch Kit constrained by Brand Constitution.', 'Launch Kit Ready');
       markStageComplete('guardian');
+    } catch (e: any) {
+      console.error(e);
+      setError(e?.message || 'Failed to generate Launch Kit.');
+      toast.error('Launch kit generation failed.', 'Generation Error');
     } finally {
       setNextLoading(false);
     }
   };
 
-  const LABEL_COLORS: Record<string, string> = {
-    'STRONG SIGNAL': '#16A34A',
-    'ON TRACK': '#16A34A',
-    'NEEDS A NUDGE': '#D97706',
-    'NEEDS A REWRITE': '#DC2626',
-  };
+  const steps = [
+    { label: 'Ingesting Copy & Context', detail: 'Parsing linguistic tone, claims, and vocabulary choices' },
+    { label: 'Scanning Locked Brand DNA & Memory', detail: 'Checking inviolable rules and past decision records' },
+    { label: 'Formulating Inline Fixes & Diff', detail: 'Generating real-time token corrections' },
+  ];
 
   return (
-    <div className="animate-fade-in">
-      <div style={{ marginBottom: '8px' }}>
-        <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--accent)', letterSpacing: '0.05em' }}>
+    <div className="animate-fade-in" style={{ maxWidth: '960px' }}>
+      <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span
+          style={{
+            fontSize: '12px',
+            fontFamily: 'var(--font-mono)',
+            color: 'var(--accent)',
+            letterSpacing: '0.05em',
+          }}
+        >
           / 08 / CONSISTENCY GUARDIAN
         </span>
+        {project.brandDnaLocked && (
+          <span className="badge badge-accent">Enforcing Locked DNA</span>
+        )}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px', gap: '16px' }}>
-        <h1 style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
-          Give the brand a second brain.
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          marginBottom: '12px',
+          gap: '16px',
+        }}
+      >
+        <h1
+          style={{
+            fontSize: 'clamp(28px, 4vw, 48px)',
+            fontWeight: 800,
+            lineHeight: 1.1,
+            letterSpacing: '-0.02em',
+            color: 'var(--text-primary)',
+          }}
+        >
+          Give the brand an inviolable shield.
         </h1>
-        <span className="badge badge-accent" style={{ flexShrink: 0, marginTop: '8px' }}>Alignment Check</span>
       </div>
 
-      <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.6, maxWidth: '600px' }}>
-        Paste any new piece of content. The guardian compares it to the DNA, world, and system — then offers a rewrite you can actually use.
+      <p
+        style={{
+          fontSize: '15px',
+          color: 'var(--text-secondary)',
+          marginBottom: '28px',
+          lineHeight: 1.6,
+          maxWidth: '680px',
+        }}
+      >
+        Paste marketing copy, landing page headlines, or social drafts. The Guardian checks alignment against your locked Brand DNA, flags forbidden tropes, and generates instant token-level fixes.
       </p>
 
-      <div className="divider" />
+      {/* Example Presets */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          marginBottom: '24px',
+          flexWrap: 'wrap',
+          padding: '12px 16px',
+          background: 'rgba(0, 0, 0, 0.02)',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+        }}
+      >
+        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+          Test with Presets:
+        </span>
+        {EXAMPLE_SNIPPETS.map((snip) => (
+          <button
+            key={snip.name}
+            type="button"
+            onClick={() => setContent(snip.text)}
+            style={{
+              padding: '5px 12px',
+              borderRadius: '6px',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-primary)',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            {snip.name}
+          </button>
+        ))}
+      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '32px' }}>
+      <AsyncProgressState
+        isLoading={checking || nextLoading}
+        error={error}
+        onRetry={checking ? handleCheck : handleNext}
+        steps={steps}
+        title={checking ? 'Auditing Copy Alignment' : 'Generating Constrained Launch Kit'}
+      />
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
         {/* Input */}
         <div>
-          <p style={{ fontSize: '14px', fontWeight: 600, marginBottom: '10px', color: 'var(--text-primary)' }}>
-            New content to check
-          </p>
+          <label
+            htmlFor="guardian-input"
+            style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: 700,
+              marginBottom: '10px',
+              color: 'var(--text-primary)',
+            }}
+          >
+            Content to Validate
+          </label>
           <textarea
+            id="guardian-input"
             className="input-field"
-            rows={8}
-            placeholder={`Paste a caption, headline, bio, or any copy...\n\nExample: "We help everyone unlock their full potential."`}
+            rows={9}
+            placeholder={`Paste a caption, headline, bio, or draft copy...\n\nExample: "We help everyone unlock their full potential with seamless AI synergy."`}
             value={content}
-            onChange={e => setContent(e.target.value)}
-            style={{ marginBottom: '12px' }}
+            onChange={(e) => setContent(e.target.value)}
+            style={{ marginBottom: '14px', resize: 'vertical' }}
           />
           <button
             className="btn-primary"
             onClick={handleCheck}
             disabled={checking || !content.trim()}
-            style={{ width: '100%' }}
+            style={{ width: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
           >
             {checking ? (
-              <>
-                <span className="animate-spin-slow" style={{ display: 'inline-block', width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%' }} />
-                Checking consistency...
-              </>
+              <span>Auditing Copy...</span>
             ) : (
               <>
-                Check consistency
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
-                  <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                <Shield size={15} /> Run Guardian Compliance Scan
               </>
             )}
           </button>
@@ -155,16 +242,39 @@ export default function GuardianStage() {
           {result ? (
             <GuardianScanner result={result} onFix={handleFix} />
           ) : (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px dashed var(--border)', borderRadius: '12px', minHeight: '260px' }}>
+            <div
+              style={{
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1.5px dashed var(--border)',
+                borderRadius: '14px',
+                minHeight: '280px',
+                background: 'rgba(0, 0, 0, 0.01)',
+              }}
+            >
               <div style={{ textAlign: 'center', padding: '24px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <circle cx="10" cy="10" r="9" stroke="var(--text-muted)" strokeWidth="1.5"/>
-                    <path d="M7 10l2 2 4-4" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                <div
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    border: '1.5px solid var(--border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 12px',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  <Shield size={22} />
                 </div>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                  Paste content and check alignment.<br />Results appear here.
+                <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                  Guardian Scanner Idle
+                </h4>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  Paste content or pick an example preset on the left to verify consistency against Brand DNA.
                 </p>
               </div>
             </div>
@@ -172,24 +282,25 @@ export default function GuardianStage() {
         </div>
       </div>
 
-      <button
-        className="btn-primary"
-        onClick={handleNext}
-        disabled={nextLoading}
-        style={{ minWidth: '220px' }}
-      >
-        {nextLoading ? (
-          <>
-            <span className="animate-spin-slow" style={{ display: 'inline-block', width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%' }} />
-            Generating Launch Kit...
-          </>
-        ) : (
-          <>
-            Generate Launch Kit
-            <ArrowRight size={14} />
-          </>
-        )}
-      </button>
+      <div className="divider" />
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          className="btn-primary"
+          onClick={handleNext}
+          disabled={nextLoading}
+          style={{ minWidth: '240px', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          {nextLoading ? (
+            <span>Generating Launch Kit...</span>
+          ) : (
+            <>
+              Generate Constrained Launch Kit
+              <ArrowRight size={15} />
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

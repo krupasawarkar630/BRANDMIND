@@ -15,6 +15,7 @@ import {
   Lock,
   GitCommit
 } from 'lucide-react';
+import { toast } from '@/lib/toast';
 
 interface BrandConstitutionModalProps {
   isOpen: boolean;
@@ -109,6 +110,7 @@ ${timeline.length === 0 ? '_No decisions recorded._' : timeline.map(t => `- **[$
   const handleCopy = () => {
     navigator.clipboard.writeText(generateMarkdown());
     setCopied(true);
+    toast.success('Brand Constitution copied as Markdown.', 'Artifact Copied');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -121,6 +123,7 @@ ${timeline.length === 0 ? '_No decisions recorded._' : timeline.map(t => `- **[$
     a.download = `${brandName.toLowerCase().replace(/\s+/g, '-')}-brand-constitution.md`;
     a.click();
     URL.revokeObjectURL(url);
+    toast.success('Downloaded Brand Constitution (.md).', 'Export Complete');
   };
 
   const handleDownloadJSON = () => {
@@ -145,6 +148,7 @@ ${timeline.length === 0 ? '_No decisions recorded._' : timeline.map(t => `- **[$
     a.download = `${brandName.toLowerCase().replace(/\s+/g, '-')}-brand-constitution.json`;
     a.click();
     URL.revokeObjectURL(url);
+    toast.success('Downloaded Brand Constitution (.json).', 'Export Complete');
   };
 
   const handlePrint = () => {

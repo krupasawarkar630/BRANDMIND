@@ -1234,7 +1234,7 @@ export class MockAIProvider implements AIProvider {
     if (toneTraits.length === 0) toneTraits.push('Pragmatic', 'Direct', 'Modern');
 
     // Audience extraction
-    let impliedAudience = hasEnterprise
+    const impliedAudience = hasEnterprise
       ? 'Enterprise leaders and strategic operations teams'
       : hasTechnical
       ? 'Engineers, technical founders, and product architects'

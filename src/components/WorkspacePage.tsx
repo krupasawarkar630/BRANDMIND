@@ -44,10 +44,17 @@ const CrisisRoomStage = dynamic(() => import('@/components/stages/CrisisRoomStag
 const GuardianStage = dynamic(() => import('@/components/stages/GuardianStage'), { loading: () => <StageSkeleton /> });
 const LaunchStage = dynamic(() => import('@/components/stages/LaunchStage'), { loading: () => <StageSkeleton /> });
 
+const useIsMounted = () => {
+  return React.useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+};
+
 export default function WorkspacePage() {
   const { project } = useStore();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useIsMounted();
 
   const stage = mounted ? project.currentStage : 'idea';
   const stageLabel = STAGE_LABELS[stage] ?? 'Stage';

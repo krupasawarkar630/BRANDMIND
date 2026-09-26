@@ -4,6 +4,21 @@ import { useStore } from '@/lib/store';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, Search, Crosshair, Shapes, Swords, Activity, Rocket, Info } from 'lucide-react';
 
+function DecisionNode({ title, decision, reason }: { title: string, decision?: string, reason?: string }) {
+  if (!decision) return null;
+  return (
+    <details style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', marginTop: '12px' }}>
+      <summary style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Info size={14} /> WHY THIS DECISION? ({title})
+      </summary>
+      <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+        <p style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '8px', fontWeight: 600 }}>Decision: {decision}</p>
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, fontStyle: 'italic' }}>Reason: {reason}</p>
+      </div>
+    </details>
+  );
+}
+
 export default function DemoPage() {
   const { project } = useStore();
   
@@ -21,21 +36,6 @@ export default function DemoPage() {
 
   const findTimelineEvent = (stage: string) => {
     return project.timeline?.find(t => t.stage.toLowerCase().includes(stage.toLowerCase()));
-  };
-
-  const DecisionNode = ({ title, decision, reason }: { title: string, decision?: string, reason?: string }) => {
-    if (!decision) return null;
-    return (
-      <details style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', marginTop: '12px' }}>
-        <summary style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Info size={14} /> WHY THIS DECISION? ({title})
-        </summary>
-        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
-          <p style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '8px', fontWeight: 600 }}>Decision: {decision}</p>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, fontStyle: 'italic' }}>Reason: {reason}</p>
-        </div>
-      </details>
-    );
   };
 
   return (

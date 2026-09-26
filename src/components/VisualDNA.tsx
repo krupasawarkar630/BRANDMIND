@@ -46,6 +46,17 @@ function inferShapeSVG(shapesDesc: string, accentColor: string): React.ReactNode
   );
 }
 
+function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+      <Icon size={14} color="var(--accent)" />
+      <h3 style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+        {label}
+      </h3>
+    </div>
+  );
+}
+
 export default function VisualDNABoard({
   visualDNA,
   brandSystem
@@ -55,15 +66,6 @@ export default function VisualDNABoard({
 }) {
   const fonts = inferFontFamily(visualDNA.typography);
   const colors = visualDNA.colors;
-
-  const SectionHeader = ({ icon: Icon, label }: { icon: React.ElementType; label: string }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-      <Icon size={14} color="var(--accent)" />
-      <h3 style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-        {label}
-      </h3>
-    </div>
-  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>

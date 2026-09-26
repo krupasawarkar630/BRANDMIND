@@ -1,30 +1,48 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useStore } from '@/lib/store';
 import BrandEvolutionMap from '@/components/BrandEvolutionMap';
 import Header from '@/components/Header';
 import ToastContainer from '@/components/ToastContainer';
-import IdeaStage from '@/components/stages/IdeaStage';
-import BlindSpotsStage from '@/components/stages/BlindSpotsStage';
-import DNAStage from '@/components/stages/DNAStage';
-import WorldsStage from '@/components/stages/WorldsStage';
-import BattleStage from '@/components/stages/BattleStage';
-import StressTestStage from '@/components/stages/StressTestStage';
-import SystemStage from '@/components/stages/SystemStage';
-import AudienceRoomStage from '@/components/stages/AudienceRoomStage';
-import MutationLabStage from '@/components/stages/MutationLabStage';
-import WhatIfMachineStage from '@/components/stages/WhatIfMachineStage';
-import RealitySimulatorStage from '@/components/stages/RealitySimulatorStage';
-import ABExperimentStage from '@/components/stages/ABExperimentStage';
-import TimelineStage from '@/components/stages/TimelineStage';
-import VisualDnaStage from '@/components/stages/VisualDnaStage';
-import CultureAdaptationStage from '@/components/stages/CultureAdaptationStage';
-import DnaLockStage from '@/components/stages/DnaLockStage';
-import CrisisRoomStage from '@/components/stages/CrisisRoomStage';
-import GuardianStage from '@/components/stages/GuardianStage';
-import LaunchStage from '@/components/stages/LaunchStage';
 import { STAGE_LABELS } from '@/lib/types';
-import { useState, useEffect } from 'react';
+
+function StageSkeleton() {
+  return (
+    <div className="animate-fade-in" style={{ maxWidth: '880px', padding: '20px 0' }}>
+      <div style={{ width: '140px', height: '14px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', marginBottom: '16px' }} />
+      <div style={{ width: '380px', height: '36px', background: 'rgba(255,255,255,0.08)', borderRadius: '8px', marginBottom: '16px' }} />
+      <div style={{ width: '100%', height: '20px', background: 'rgba(255,255,255,0.04)', borderRadius: '4px', marginBottom: '32px' }} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+        <div style={{ height: '140px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px' }} />
+        <div style={{ height: '140px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px' }} />
+        <div style={{ height: '140px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px' }} />
+      </div>
+    </div>
+  );
+}
+
+// Lazy loaded stage modules with dynamic code splitting
+const IdeaStage = dynamic(() => import('@/components/stages/IdeaStage'), { loading: () => <StageSkeleton /> });
+const BlindSpotsStage = dynamic(() => import('@/components/stages/BlindSpotsStage'), { loading: () => <StageSkeleton /> });
+const DNAStage = dynamic(() => import('@/components/stages/DNAStage'), { loading: () => <StageSkeleton /> });
+const WorldsStage = dynamic(() => import('@/components/stages/WorldsStage'), { loading: () => <StageSkeleton /> });
+const BattleStage = dynamic(() => import('@/components/stages/BattleStage'), { loading: () => <StageSkeleton /> });
+const StressTestStage = dynamic(() => import('@/components/stages/StressTestStage'), { loading: () => <StageSkeleton /> });
+const SystemStage = dynamic(() => import('@/components/stages/SystemStage'), { loading: () => <StageSkeleton /> });
+const AudienceRoomStage = dynamic(() => import('@/components/stages/AudienceRoomStage'), { loading: () => <StageSkeleton /> });
+const MutationLabStage = dynamic(() => import('@/components/stages/MutationLabStage'), { loading: () => <StageSkeleton /> });
+const WhatIfMachineStage = dynamic(() => import('@/components/stages/WhatIfMachineStage'), { loading: () => <StageSkeleton /> });
+const RealitySimulatorStage = dynamic(() => import('@/components/stages/RealitySimulatorStage'), { loading: () => <StageSkeleton /> });
+const ABExperimentStage = dynamic(() => import('@/components/stages/ABExperimentStage'), { loading: () => <StageSkeleton /> });
+const TimelineStage = dynamic(() => import('@/components/stages/TimelineStage'), { loading: () => <StageSkeleton /> });
+const VisualDnaStage = dynamic(() => import('@/components/stages/VisualDnaStage'), { loading: () => <StageSkeleton /> });
+const CultureAdaptationStage = dynamic(() => import('@/components/stages/CultureAdaptationStage'), { loading: () => <StageSkeleton /> });
+const DnaLockStage = dynamic(() => import('@/components/stages/DnaLockStage'), { loading: () => <StageSkeleton /> });
+const CrisisRoomStage = dynamic(() => import('@/components/stages/CrisisRoomStage'), { loading: () => <StageSkeleton /> });
+const GuardianStage = dynamic(() => import('@/components/stages/GuardianStage'), { loading: () => <StageSkeleton /> });
+const LaunchStage = dynamic(() => import('@/components/stages/LaunchStage'), { loading: () => <StageSkeleton /> });
 
 export default function WorkspacePage() {
   const { project } = useStore();

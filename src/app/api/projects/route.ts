@@ -1,174 +1,207 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import {
   projects,
   brandDna,
   brandWorlds,
-  battleSessions,
-  stressTests,
-  audienceSimulations,
-  mutations,
-  whatIfScenarios,
   decisions,
-  brandLocks,
   guardianScans,
-  launchAssets,
   auditLogs,
   brandVersions
 } from '@/lib/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
+import { getOrCreateUserId, isValidId, sanitizeText } from '@/lib/auth/session';
 
-// GET /api/projects - list all projects or return the latest project
+// GET /api/projects - list user's projects with safe pagination and projection
 export async function GET(req: NextRequest) {
   try {
+    const userId = await getOrCreateUserId(req);
     const { searchParams } = new URL(req.url);
     const latestOnly = searchParams.get('latest') === 'true';
 
+    // Per-user query with parameterized filter
+    const query = db
+      .select({
+        id: projects.id,
+        name: projects.name,
+        tagline: projects.tagline,
+        currentStage: projects.currentStage,
+        brandDnaLocked: projects.brandDnaLocked,
+        completedStages: projects.completedStages,
+        createdAt: projects.createdAt,
+        updatedAt: projects.updatedAt,
+      })
+      .from(projects)
+      .where(eq(projects.userId, userId))
+      .orderBy(desc(projects.updatedAt));
+
     if (latestOnly) {
-      const latest = await db.select().from(projects).orderBy(desc(projects.updatedAt)).limit(1);
-      if (latest.length === 0) {
-        return NextResponse.json({ success: true, project: null });
-      }
-      return NextResponse.json({ success: true, project: latest[0] });
+      const latest = await query.limit(1);
+      return NextResponse.json({
+        success: true,
+        project: latest[0] || null,
+      });
     }
 
-    const allProjects = await db.select().from(projects).orderBy(desc(projects.updatedAt));
-    return NextResponse.json({ success: true, projects: allProjects });
+    // Limit to max 30 projects to avoid excessive payload transfer
+    const userProjects = await query.limit(30);
+
+    return NextResponse.json({
+      success: true,
+      projects: userProjects,
+    });
   } catch (error: any) {
-    console.error('Error fetching projects:', error);
+    // Avoid logging sensitive credentials
+    console.error('Projects query execution error');
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch projects' },
+      { success: false, error: 'Failed to retrieve projects.' },
       { status: 500 }
     );
   }
 }
 
-// POST /api/projects - Upsert project and state to ensure user can leave and return without losing work
+// POST /api/projects - Securely upsert project with validated inputs and user isolation
 export async function POST(req: NextRequest) {
   try {
+    const userId = await getOrCreateUserId(req);
     const body = await req.json();
+
+    // 1. Strict Input Validation
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ success: false, error: 'Invalid JSON payload.' }, { status: 400 });
+    }
+
+    const id = sanitizeText(body.id, 128);
+    const name = sanitizeText(body.name || 'Brand Study', 200);
+    const tagline = sanitizeText(body.tagline, 500);
+    const currentStage = sanitizeText(body.currentStage || 'idea', 50);
+
+    if (!isValidId(id)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid or missing project identifier.' },
+        { status: 400 }
+      );
+    }
+
     const {
-      id,
-      name,
-      tagline,
-      currentStage,
       ideaInput,
       completedStages,
       brandDnaLocked,
       dna,
       worlds,
-      battle,
-      stressTest,
-      audienceRoom,
-      mutationsList,
-      whatIf,
       decisionLogs,
       guardian,
-      launchKit,
       brandSystem
     } = body;
 
-    if (!id || !name) {
-      return NextResponse.json(
-        { success: false, error: 'Project ID and name are required' },
-        { status: 400 }
-      );
-    }
-
-    // 1. Upsert Project record
-    const existing = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
+    // 2. Check existing project with per-user ownership verification
+    const existing = await db
+      .select({ id: projects.id, userId: projects.userId })
+      .from(projects)
+      .where(eq(projects.id, id))
+      .limit(1);
 
     if (existing.length === 0) {
+      // Create new project owned by current user
       await db.insert(projects).values({
         id,
+        userId,
         name,
         tagline: tagline || null,
-        currentStage: currentStage || 'idea',
+        currentStage,
         ideaInput: ideaInput || null,
-        completedStages: completedStages || [],
-        brandDnaLocked: !!brandDnaLocked,
+        completedStages: Array.isArray(completedStages) ? completedStages : [],
+        brandDnaLocked: Boolean(brandDnaLocked),
         updatedAt: new Date(),
       });
     } else {
-      await db.update(projects).set({
-        name,
-        tagline: tagline || null,
-        currentStage: currentStage || existing[0].currentStage,
-        ideaInput: ideaInput !== undefined ? ideaInput : existing[0].ideaInput,
-        completedStages: completedStages !== undefined ? completedStages : existing[0].completedStages,
-        brandDnaLocked: brandDnaLocked !== undefined ? !!brandDnaLocked : existing[0].brandDnaLocked,
-        updatedAt: new Date(),
-      }).where(eq(projects.id, id));
+      // If project exists, verify user ownership
+      if (existing[0].userId && existing[0].userId !== userId) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized to modify this project.' },
+          { status: 403 }
+        );
+      }
+
+      await db
+        .update(projects)
+        .set({
+          name,
+          tagline: tagline || null,
+          currentStage,
+          ideaInput: ideaInput !== undefined ? ideaInput : undefined,
+          completedStages: Array.isArray(completedStages) ? completedStages : undefined,
+          brandDnaLocked: brandDnaLocked !== undefined ? Boolean(brandDnaLocked) : undefined,
+          updatedAt: new Date(),
+        })
+        .where(eq(projects.id, id));
     }
 
-    // 2. Sync Brand DNA if provided
-    if (dna) {
-      const existingDna = await db.select().from(brandDna).where(eq(brandDna.projectId, id)).limit(1);
+    // 3. Parameterized upsert of Brand DNA
+    if (dna && typeof dna === 'object') {
+      const existingDna = await db
+        .select({ id: brandDna.id })
+        .from(brandDna)
+        .where(eq(brandDna.projectId, id))
+        .limit(1);
+
+      const dnaValues = {
+        projectId: id,
+        coreProblem: sanitizeText(dna.coreProblem, 2000),
+        targetUser: sanitizeText(dna.targetUser, 2000),
+        valueProposition: sanitizeText(dna.valueProposition, 2000),
+        differentiator: sanitizeText(dna.differentiator, 2000),
+        personality: Array.isArray(dna.personality) ? dna.personality : [],
+        rawDna: dna,
+        updatedAt: new Date(),
+      };
+
       if (existingDna.length === 0) {
-        await db.insert(brandDna).values({
-          projectId: id,
-          coreProblem: dna.coreProblem || null,
-          targetUser: dna.targetUser || null,
-          valueProposition: dna.valueProposition || null,
-          differentiator: dna.differentiator || null,
-          personality: dna.personality || [],
-          radarScores: dna.radarScores || null,
-          visualDna: dna.visualDna || null,
-          rawDna: dna,
-          updatedAt: new Date(),
-        });
+        await db.insert(brandDna).values(dnaValues);
       } else {
-        await db.update(brandDna).set({
-          coreProblem: dna.coreProblem || null,
-          targetUser: dna.targetUser || null,
-          valueProposition: dna.valueProposition || null,
-          differentiator: dna.differentiator || null,
-          personality: dna.personality || [],
-          radarScores: dna.radarScores || null,
-          visualDna: dna.visualDna || null,
-          rawDna: dna,
-          updatedAt: new Date(),
-        }).where(eq(brandDna.projectId, id));
+        await db.update(brandDna).set(dnaValues).where(eq(brandDna.projectId, id));
       }
     }
 
-    // 3. Sync Brand Worlds if provided
+    // 4. Parameterized upsert of Brand Worlds
     if (Array.isArray(worlds) && worlds.length > 0) {
       for (const w of worlds) {
-        if (!w.id) continue;
-        const existingW = await db.select().from(brandWorlds).where(eq(brandWorlds.id, w.id)).limit(1);
+        if (!w || !w.id || !isValidId(w.id)) continue;
+        const existingW = await db
+          .select({ id: brandWorlds.id })
+          .from(brandWorlds)
+          .where(eq(brandWorlds.id, w.id))
+          .limit(1);
+
+        const worldValues = {
+          id: w.id,
+          projectId: id,
+          name: sanitizeText(w.name || 'World', 200),
+          tagline: sanitizeText(w.tagline, 500),
+          strategicIdea: sanitizeText(w.strategicIdea, 2000),
+          isSelected: Boolean(w.isSelected),
+          data: w,
+        };
+
         if (existingW.length === 0) {
-          await db.insert(brandWorlds).values({
-            id: w.id,
-            projectId: id,
-            name: w.name || 'World',
-            tagline: w.tagline || null,
-            strategicIdea: w.strategicIdea || null,
-            isSelected: !!w.isSelected,
-            data: w,
-          });
+          await db.insert(brandWorlds).values(worldValues);
         } else {
-          await db.update(brandWorlds).set({
-            name: w.name || 'World',
-            tagline: w.tagline || null,
-            strategicIdea: w.strategicIdea || null,
-            isSelected: !!w.isSelected,
-            data: w,
-          }).where(eq(brandWorlds.id, w.id));
+          await db.update(brandWorlds).set(worldValues).where(eq(brandWorlds.id, w.id));
         }
       }
     }
 
-    // 4. Record Decisions if provided
+    // 5. Parameterized batch insert of Decision Timeline entries
     if (Array.isArray(decisionLogs) && decisionLogs.length > 0) {
       for (const d of decisionLogs) {
-        if (d.decision && d.stage) {
+        if (d && d.decision && d.stage) {
           await db.insert(decisions).values({
             projectId: id,
-            stage: d.stage,
-            decision: d.decision,
-            reason: d.reason || 'User decision',
-            source: d.source || 'USER',
+            stage: sanitizeText(d.stage, 100),
+            decision: sanitizeText(d.decision, 2000),
+            reason: sanitizeText(d.reason || 'User action', 2000),
+            source: sanitizeText(d.source || 'USER', 50),
             metadata: d.metadata || null,
             timestamp: d.timestamp ? new Date(d.timestamp) : new Date(),
           });
@@ -176,44 +209,43 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 5. Sync Brand System / Version if provided
-    if (brandSystem) {
+    // 6. Parameterized save for Brand Version snapshot
+    if (brandSystem && typeof brandSystem === 'object') {
       await db.insert(brandVersions).values({
         projectId: id,
-        brandSystem: brandSystem,
-        changeSummary: 'Snapshot saved',
+        brandSystem,
+        changeSummary: 'Auto-saved version checkpoint',
       });
     }
 
-    // 6. Sync Guardian scan if provided
-    if (guardian) {
+    // 7. Parameterized save for Guardian scan
+    if (guardian && typeof guardian === 'object') {
       await db.insert(guardianScans).values({
         projectId: id,
-        contentScanned: guardian.contentScanned || 'Brand scan',
-        consistencyScore: guardian.consistencyScore || 90,
-        summary: guardian.summary || null,
-        violations: guardian.violations || [],
-        suggestedRewrite: guardian.suggestedRewrite || null,
+        contentScanned: sanitizeText(guardian.contentScanned || 'Copy scan', 5000),
+        consistencyScore: typeof guardian.consistencyScore === 'number' ? guardian.consistencyScore : 90,
+        summary: sanitizeText(guardian.summary, 2000),
+        violations: Array.isArray(guardian.violations) ? guardian.violations : [],
+        suggestedRewrite: sanitizeText(guardian.suggestedRewrite, 5000),
       });
     }
 
-    // 7. Sync Audit Log
+    // 8. Audit log for compliance
     await db.insert(auditLogs).values({
       projectId: id,
-      action: 'PROJECT_STATE_SAVED',
-      actor: 'system',
+      action: 'PROJECT_STATE_PERSISTED',
+      actor: userId,
       details: { stage: currentStage, timestamp: new Date().toISOString() },
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Project state persisted successfully',
       projectId: id,
     });
   } catch (error: any) {
-    console.error('Error saving project:', error);
+    console.error('Project persistence error');
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to save project' },
+      { success: false, error: 'Failed to persist project state.' },
       { status: 500 }
     );
   }

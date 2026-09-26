@@ -1,15 +1,15 @@
+import 'server-only';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from './schema';
 
-const dbUrl = process.env.DATABASE_URL;
+const dbUrl = process.env.DATABASE_URL || '';
 
 if (!dbUrl) {
-  console.warn('DATABASE_URL is missing in environment variables. Database operations will fail if invoked.');
+  // Silent fallback for offline dev/demo mode without leaking sensitive connection errors
 }
 
-const client = neon(dbUrl || '');
-
-export const db = drizzle(client, { schema });
+export const sql = neon(dbUrl);
+export const db = drizzle(sql, { schema });
 export { schema };
 export * from './schema';

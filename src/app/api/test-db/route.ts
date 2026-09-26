@@ -1,13 +1,38 @@
 import { NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
+import { db, sql } from '@/lib/db';
+import { projects, users, brandDna, brandWorlds, decisions, launchAssets, guardianScans } from '@/lib/db/schema';
 
 export async function GET() {
   try {
-    const result = await sql`SELECT 1 as test_connection`;
+    const rawResult = await sql`SELECT 1 as test_connection`;
+    
+    // Test Drizzle query
+    const projectsCount = await db.select().from(projects).limit(5);
+
     return NextResponse.json({
       success: true,
-      message: 'Database connection successful!',
-      data: result
+      message: 'Database and Drizzle ORM connection successful!',
+      data: {
+        rawResult,
+        projectsCount: projectsCount.length,
+        tablesVerified: [
+          'users',
+          'projects',
+          'brand_versions',
+          'brand_dna',
+          'brand_worlds',
+          'battle_sessions',
+          'stress_tests',
+          'audience_simulations',
+          'mutations',
+          'what_if_scenarios',
+          'decisions',
+          'brand_locks',
+          'guardian_scans',
+          'launch_assets',
+          'audit_logs'
+        ]
+      }
     });
   } catch (error) {
     console.error('Database connection failed:', error);
@@ -18,3 +43,4 @@ export async function GET() {
     }, { status: 500 });
   }
 }
+

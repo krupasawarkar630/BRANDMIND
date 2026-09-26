@@ -1,13 +1,16 @@
 'use client';
 
 import { useStore } from '@/lib/store';
-import { RotateCcw, Sparkles } from 'lucide-react';
+import { RotateCcw, Sparkles, Cloud, CloudCheck, CloudUpload } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useAutoSync } from '@/lib/useAutoSync';
 
 export default function Header() {
   const { project, resetProject, loadFullDemoProject } = useStore();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  const { syncStatus } = useAutoSync();
 
   const handleReset = () => {
     if (confirm('Start a new brand study? Current progress will be lost.')) {
@@ -108,6 +111,7 @@ export default function Header() {
           style={{
             display: 'inline-flex',
             alignItems: 'center',
+            gap: '5px',
             padding: '4px 10px',
             borderRadius: '100px',
             fontSize: '11px',
@@ -115,16 +119,16 @@ export default function Header() {
             letterSpacing: '0.05em',
             textTransform: 'uppercase',
             fontFamily: 'var(--font-mono)',
-            background: 'var(--accent-light)',
-            color: 'var(--accent)',
-            border: '1px solid var(--accent)',
+            background: syncStatus === 'saving' ? 'rgba(59, 130, 246, 0.1)' : 'var(--accent-light)',
+            color: syncStatus === 'saving' ? '#3b82f6' : 'var(--accent)',
+            border: `1px solid ${syncStatus === 'saving' ? '#3b82f6' : 'var(--accent)'}`,
           }}
         >
-          Mock Intelligence
+          {syncStatus === 'saving' ? 'SYNCING DB...' : syncStatus === 'saved' ? 'POSTGRES SYNCED' : 'POSTGRES READY'}
         </span>
 
         <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-          LOCAL PROJECT / {mounted && project.completedStages.length > 0 ? 'SAVED' : 'DRAFT'}
+          {mounted && project.completedStages.length > 0 ? `STAGES: ${project.completedStages.length}/12` : 'DRAFT'}
         </span>
 
         <button

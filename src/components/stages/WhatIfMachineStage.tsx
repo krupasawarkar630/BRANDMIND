@@ -9,12 +9,17 @@ const TRANSFORMATIONS = [
   'BOLDER', 'PREMIUM', 'HUMAN', 'PLAYFUL', 'TECHNICAL', 'MINIMAL', 'EMOTIONAL', 'CULTURAL'
 ];
 
+import BeforeAfterComparison from '@/components/BeforeAfterComparison';
+import StageEmptyState from '@/components/StageEmptyState';
+
 export default function WhatIfMachineStage() {
   const { project, setWhatIfResult, applyWhatIf, saveWhatIfAsVariant, discardWhatIf, markStageComplete } = useStore();
   const [loading, setLoading] = useState<string | null>(null);
 
   const { brandSystem, brandDNA, whatIfResult, brandVariants = [] } = project;
-  if (!brandSystem || !brandDNA) return null;
+  if (!brandSystem || !brandDNA) {
+    return <StageEmptyState stage="whatIfMachine" prerequisiteStage="system" />;
+  }
 
   const handleTransform = async (transformation: string) => {
     setLoading(transformation);
@@ -88,29 +93,19 @@ export default function WhatIfMachineStage() {
             </button>
           </div>
 
-          <div className="dark-hero" style={{ padding: '32px', marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#E5E5E3', marginBottom: '24px' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', borderRadius: '16px', padding: '32px', marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: '24px' }}>
               What Changed?
             </h3>
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {Object.entries(whatIfResult.changes).map(([key, change]) => (
-                <div key={key} style={{ background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginBottom: '12px', display: 'block' }}>
-                    {change.element}
-                  </span>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <p style={{ fontSize: '13px', color: '#A3A3A3', textDecoration: 'line-through' }}>
-                      {change.original}
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                      <ArrowRight size={14} color="#16A34A" style={{ marginTop: '2px', flexShrink: 0 }} />
-                      <p style={{ fontSize: '14px', fontWeight: 500, color: '#FFFFFF', lineHeight: 1.4 }}>
-                        {change.newValue}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <BeforeAfterComparison
+                  key={key}
+                  title={change.element}
+                  beforeText={change.original}
+                  afterText={change.newValue}
+                />
               ))}
             </div>
           </div>

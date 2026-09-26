@@ -6,93 +6,8 @@ import { useState, useEffect } from 'react';
 import type { BlindSpot } from '@/lib/types';
 import { ArrowRight, AlertTriangle } from 'lucide-react';
 
-const SEVERITY_COLORS: Record<string, string> = {
-  high: '#DC2626',
-  medium: '#D97706',
-  low: '#16A34A',
-};
-
-const SEVERITY_BG: Record<string, string> = {
-  high: '#FEF2F2',
-  medium: '#FFFBEB',
-  low: '#F0FDF4',
-};
-
-function BlindSpotCard({ spot, onUpdate }: { spot: BlindSpot; onUpdate: (status: 'accepted' | 'rejected' | 'explored') => void }) {
-  return (
-    <div
-      className="stage-card animate-fade-in"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-        borderColor: spot.status !== 'pending' ? 'var(--border)' : undefined,
-        opacity: spot.status !== 'pending' ? 0.6 : 1,
-        transition: 'all 0.3s ease',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <AlertTriangle size={16} color={SEVERITY_COLORS[spot.severity]} />
-          <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: SEVERITY_COLORS[spot.severity] }}>
-            {spot.severity} SEVERITY — {spot.category}
-          </p>
-        </div>
-        {spot.status !== 'pending' && (
-          <span className="badge badge-muted" style={{ fontSize: '10px' }}>
-            {spot.status}
-          </span>
-        )}
-      </div>
-
-      <div style={{ padding: '16px', background: '#F9F9F8', borderRadius: '8px', border: '1px solid var(--border)' }}>
-        <p style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--text-primary)', marginBottom: '8px' }}>
-          "{spot.statement}"
-        </p>
-        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-          <strong>Why BRANDMIND flagged it:</strong> {spot.evidence}
-        </p>
-      </div>
-
-      <div>
-        <p style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.6, marginBottom: '8px' }}>
-          {spot.whyItMatters}
-        </p>
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-          <strong>Affected decisions:</strong> {spot.affectedBrandDecisions.join(', ')}
-        </p>
-      </div>
-
-      <div className="quote-block" style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
-        <strong>BRANDMIND QUESTION:</strong> {spot.suggestedQuestion}
-      </div>
-
-      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-        <button
-          className="btn-outline"
-          onClick={() => onUpdate('accepted')}
-          style={{ flex: 1, borderColor: spot.status === 'accepted' ? 'var(--accent)' : undefined, color: spot.status === 'accepted' ? 'var(--accent)' : undefined }}
-        >
-          Accept
-        </button>
-        <button
-          className="btn-outline"
-          onClick={() => onUpdate('rejected')}
-          style={{ flex: 1, borderColor: spot.status === 'rejected' ? 'var(--text-primary)' : undefined, color: spot.status === 'rejected' ? 'var(--text-primary)' : undefined }}
-        >
-          Reject
-        </button>
-        <button
-          className="btn-outline"
-          onClick={() => onUpdate('explored')}
-          style={{ flex: 1, borderColor: spot.status === 'explored' ? '#2563EB' : undefined, color: spot.status === 'explored' ? '#2563EB' : undefined }}
-        >
-          Explore
-        </button>
-      </div>
-    </div>
-  );
-}
+import BlindSpotSignal from '@/components/BlindSpotSignal';
+import StageEmptyState from '@/components/StageEmptyState';
 
 export default function BlindSpotsStage() {
   const { project, updateBlindSpotStatus, setBrandDNA, markStageComplete } = useStore();
@@ -109,7 +24,7 @@ export default function BlindSpotsStage() {
           const data = await res.json();
           if (data.blindSpots && data.blindSpots.length > 0) {
             // Reconcile DB spots with local spots
-            const updatedSpots = blindSpots.spots.map((s: any) => {
+            const updatedSpots = (blindSpots.spots || []).map((s: any) => {
               const persisted = data.blindSpots.find((p: any) => p.id === s.id);
               return persisted ? { ...s, status: persisted.status } : s;
             });
@@ -124,9 +39,11 @@ export default function BlindSpotsStage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id]);
 
-  if (!blindSpots || !project.idea) return null;
+  if (!blindSpots || !project.idea) {
+    return <StageEmptyState stage="blindSpots" prerequisiteStage="idea" />;
+  }
 
-  const allProcessed = blindSpots.spots.every(spot => spot.status !== 'pending');
+  const allProcessed = (blindSpots.spots || []).every(spot => spot.status !== 'pending');
 
   const handleUpdateSpot = async (spotId: string, status: 'accepted' | 'rejected' | 'explored') => {
     // Optimistic UI update via Zustand
@@ -134,7 +51,7 @@ export default function BlindSpotsStage() {
 
     // Persist to Neon Postgres
     try {
-      const spot = blindSpots.spots.find(s => s.id === spotId);
+      const spot = (blindSpots.spots || []).find(s => s.id === spotId);
       if (spot) {
         await fetch('/api/blind-spots', {
           method: 'POST',
@@ -185,9 +102,39 @@ export default function BlindSpotsStage() {
 
       <div className="divider" />
 
+      {/* AI Context — helps judges understand what happens next */}
+      <div
+        role="note"
+        aria-label="AI process description"
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '12px',
+          padding: '14px 16px',
+          background: 'rgba(217,83,30,0.06)',
+          border: '1px solid rgba(217,83,30,0.18)',
+          borderRadius: '10px',
+          marginBottom: '24px',
+        }}
+      >
+        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }} aria-hidden="true">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M5 1v4m0 2v.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '3px' }}>
+            What the AI is doing
+          </p>
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            The AI analyzes the initial idea against common startup failures to extract blind spots, risky assumptions, and unverified claims. Accepting or rejecting these shapes the core Brand DNA.
+          </p>
+        </div>
+      </div>
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '32px' }}>
-        {blindSpots.spots.map(spot => (
-          <BlindSpotCard
+        {(blindSpots.spots || []).map(spot => (
+          <BlindSpotSignal
             key={spot.id}
             spot={spot}
             onUpdate={(status) => handleUpdateSpot(spot.id, status)}

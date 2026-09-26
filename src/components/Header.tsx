@@ -1,11 +1,11 @@
 'use client';
 
 import { useStore } from '@/lib/store';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function Header() {
-  const { project, resetProject } = useStore();
+  const { project, resetProject, loadFullDemoProject } = useStore();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -17,6 +17,7 @@ export default function Header() {
 
   return (
     <header
+      role="banner"
       style={{
         height: '52px',
         borderBottom: '1px solid var(--border)',
@@ -61,6 +62,8 @@ export default function Header() {
       {/* Idea preview */}
       {mounted && project.idea?.idea && (
         <span
+          aria-label={project.idea.idea}
+          title={project.idea.idea}
           style={{
             fontSize: '13px',
             color: 'var(--text-secondary)',
@@ -81,6 +84,26 @@ export default function Header() {
 
       {/* Right actions */}
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <button
+          onClick={() => loadFullDemoProject(project.currentStage)}
+          className="btn-primary"
+          style={{
+            padding: '4px 12px',
+            fontSize: '11px',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            borderRadius: '100px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+          }}
+          title="Instantly populate the complete brand strategy pipeline with demo data"
+        >
+          <Sparkles size={12} />
+          Load Full Demo
+        </button>
+
         <span
           style={{
             display: 'inline-flex',
@@ -106,6 +129,8 @@ export default function Header() {
 
         <button
           onClick={handleReset}
+          aria-label="Start new brand study"
+          data-tooltip="New study"
           style={{
             background: 'transparent',
             border: 'none',

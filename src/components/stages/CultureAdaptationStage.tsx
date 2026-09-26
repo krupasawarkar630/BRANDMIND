@@ -4,6 +4,7 @@ import { useStore } from '@/lib/store';
 import { aiProvider } from '@/lib/ai-provider';
 import { useState } from 'react';
 import { ArrowRight, Globe2, Anchor, Shuffle, Save, AlertTriangle } from 'lucide-react';
+import StageEmptyState from '@/components/StageEmptyState';
 
 export default function CultureAdaptationStage() {
   const { project, addCultureAdaptation, saveCultureAdaptation, markStageComplete } = useStore();
@@ -12,7 +13,9 @@ export default function CultureAdaptationStage() {
   const [customMarket, setCustomMarket] = useState('');
 
   const { brandDNA, brandSystem, cultureAdaptations = [] } = project;
-  if (!brandDNA || !brandSystem) return null;
+  if (!brandDNA || !brandSystem) {
+    return <StageEmptyState stage="cultureAdaptation" prerequisiteStage="system" />;
+  }
 
   const currentAdaptation = cultureAdaptations.find(a => a.status === 'pending');
 

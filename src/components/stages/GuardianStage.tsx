@@ -4,6 +4,8 @@ import { useStore } from '@/lib/store';
 import { aiProvider } from '@/lib/ai-provider';
 import { useState } from 'react';
 import { ArrowRight, AlertTriangle, CheckCircle, Wand2 } from 'lucide-react';
+import GuardianScanner from '@/components/GuardianScanner';
+import StageEmptyState from '@/components/StageEmptyState';
 
 function ScoreRing({ value, label }: { value: number; label: string }) {
   return (
@@ -42,7 +44,9 @@ export default function GuardianStage() {
   const [result, setResult] = useState(project.guardian || null);
   const [nextLoading, setNextLoading] = useState(false);
 
-  if (!system || !dna) return null;
+  if (!system || !dna) {
+    return <StageEmptyState stage="guardian" prerequisiteStage="system" />;
+  }
 
   const handleCheck = async () => {
     if (!content.trim()) return;
@@ -149,103 +153,7 @@ export default function GuardianStage() {
         {/* Result */}
         <div>
           {result ? (
-            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Score */}
-              <div style={{ padding: '20px 24px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                  <div>
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: '4px' }}>
-                      Alignment
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
-                      <span style={{ fontSize: '48px', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1 }}>
-                        {result.consistencyScore}
-                      </span>
-                      <span style={{ fontSize: '20px', color: 'var(--text-muted)' }}>%</span>
-                    </div>
-                  </div>
-                  <span
-                    style={{
-                      padding: '6px 14px',
-                      borderRadius: '100px',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      letterSpacing: '0.06em',
-                      fontFamily: 'var(--font-mono)',
-                      border: `1px solid ${LABEL_COLORS[result.label] || 'var(--border)'}`,
-                      color: LABEL_COLORS[result.label] || 'var(--text-primary)',
-                    }}
-                  >
-                    {result.label}
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-around' }}>
-                  <ScoreRing value={result.voiceMatch} label="Voice" />
-                  <ScoreRing value={result.personalityMatch} label="Personality" />
-                  <ScoreRing value={result.positioningMatch} label="Positioning" />
-                </div>
-              </div>
-
-              <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                {result.summary}
-              </p>
-
-              {/* Violations */}
-              <div>
-                <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                  Violations
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {result.violations.filter(v => v.status === 'pending').map((v) => (
-                    <div key={v.id} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px' }}>
-                      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                        <AlertTriangle size={16} color="#DC2626" style={{ marginTop: '2px', flexShrink: 0 }} />
-                        <div>
-                          <p style={{ fontSize: '14px', fontWeight: 600, color: '#DC2626', marginBottom: '4px' }}>BRAND VIOLATION</p>
-                          <p style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{v.violation}</p>
-                        </div>
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px', background: 'var(--bg-card)', padding: '12px', borderRadius: '6px' }}>
-                        <div>
-                          <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Expected</span>
-                          <p style={{ fontSize: '12px', color: '#16A34A' }}>{v.expected}</p>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Generated</span>
-                          <p style={{ fontSize: '12px', color: '#DC2626' }}>{v.generated}</p>
-                        </div>
-                      </div>
-                      <button className="btn-outline" onClick={() => handleFix(v.id, v.fixedContent)} style={{ width: '100%', justifyContent: 'center' }}>
-                        <Wand2 size={14} /> Fix Automatically
-                      </button>
-                    </div>
-                  ))}
-                  {result.violations.length === 0 && (
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', color: '#16A34A', padding: '12px', background: '#16A34A10', borderRadius: '8px' }}>
-                      <CheckCircle size={16} />
-                      <span style={{ fontSize: '13px', fontWeight: 500 }}>No violations detected.</span>
-                    </div>
-                  )}
-                  {result.violations.length > 0 && result.violations.every(v => v.status === 'fixed') && (
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', color: '#16A34A', padding: '12px', background: '#16A34A10', borderRadius: '8px' }}>
-                      <CheckCircle size={16} />
-                      <span style={{ fontSize: '13px', fontWeight: 500 }}>All violations fixed.</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Suggested rewrite */}
-              <div>
-                <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                  Suggested Rewrite
-                </p>
-                <div style={{ padding: '14px 16px', background: 'var(--accent-light)', borderRadius: '8px', border: '1px solid var(--accent)', fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.6, fontStyle: 'italic' }}>
-                  "{result.suggestedRewrite}"
-                </div>
-              </div>
-            </div>
+            <GuardianScanner result={result} onFix={handleFix} />
           ) : (
             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px dashed var(--border)', borderRadius: '12px', minHeight: '260px' }}>
               <div style={{ textAlign: 'center', padding: '24px' }}>

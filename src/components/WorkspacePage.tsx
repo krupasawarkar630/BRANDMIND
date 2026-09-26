@@ -1,7 +1,7 @@
 'use client';
 
 import { useStore } from '@/lib/store';
-import Sidebar from '@/components/Sidebar';
+import BrandEvolutionMap from '@/components/BrandEvolutionMap';
 import Header from '@/components/Header';
 import IdeaStage from '@/components/stages/IdeaStage';
 import BlindSpotsStage from '@/components/stages/BlindSpotsStage';
@@ -22,7 +22,7 @@ import DnaLockStage from '@/components/stages/DnaLockStage';
 import CrisisRoomStage from '@/components/stages/CrisisRoomStage';
 import GuardianStage from '@/components/stages/GuardianStage';
 import LaunchStage from '@/components/stages/LaunchStage';
-
+import { STAGE_LABELS } from '@/lib/types';
 import { useState, useEffect } from 'react';
 
 export default function WorkspacePage() {
@@ -31,6 +31,7 @@ export default function WorkspacePage() {
   useEffect(() => setMounted(true), []);
 
   const stage = mounted ? project.currentStage : 'idea';
+  const stageLabel = STAGE_LABELS[stage] ?? 'Stage';
 
   const renderStage = () => {
     switch (stage) {
@@ -59,19 +60,18 @@ export default function WorkspacePage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+      <a href="#main-content" className="skip-to-content">Skip to main content</a>
       <Header />
+      <BrandEvolutionMap />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Sidebar */}
-        <Sidebar />
-
-        {/* Main content */}
+        <div aria-live="polite" aria-atomic="true" className="sr-only">
+          {mounted ? `Now viewing: ${stageLabel}` : ''}
+        </div>
         <main
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '40px 48px 80px',
-            background: 'var(--bg)',
-          }}
+          id="main-content"
+          role="main"
+          aria-label={`${stageLabel} — BRANDMIND workspace`}
+          style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '40px 48px 80px', background: 'var(--bg)' }}
         >
           {renderStage()}
         </main>

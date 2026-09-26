@@ -4,6 +4,7 @@ import { useStore } from '@/lib/store';
 import { aiProvider } from '@/lib/ai-provider';
 import { useState } from 'react';
 import { ArrowRight, Check } from 'lucide-react';
+import StageEmptyState from '@/components/StageEmptyState';
 
 function SystemSection({ label, content }: { label: string; content: string | string[] }) {
   return (
@@ -31,7 +32,9 @@ export default function SystemStage() {
   const system = project.brandSystem;
   const [loading, setLoading] = useState(false);
 
-  if (!system) return null;
+  if (!system) {
+    return <StageEmptyState stage="system" prerequisiteStage="stress" />;
+  }
 
   const handleNext = async () => {
     markStageComplete('system');

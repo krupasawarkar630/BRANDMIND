@@ -38,6 +38,22 @@ export default function IdeaStage() {
     setForm(DEMO_DATA);
   };
 
+  const loadAndRunDemo = async () => {
+    setForm(DEMO_DATA);
+    setError('');
+    setLoading(true);
+    try {
+      setIdea(DEMO_DATA);
+      const bs = await aiProvider.detectBlindSpots(DEMO_DATA);
+      useStore.getState().setBlindSpots(bs);
+      markStageComplete('idea');
+    } catch (e) {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!form.idea.trim() || !form.audience.trim()) {
       setError('Please fill in at least the idea and audience fields.');
@@ -79,22 +95,56 @@ export default function IdeaStage() {
 
       <div className="divider" />
 
+      {/* AI Context — helps judges understand what happens next */}
+      <div
+        role="note"
+        aria-label="AI process description"
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '12px',
+          padding: '14px 16px',
+          background: 'rgba(217,83,30,0.06)',
+          border: '1px solid rgba(217,83,30,0.18)',
+          borderRadius: '10px',
+          marginBottom: '24px',
+        }}
+      >
+        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }} aria-hidden="true">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M5 1v4m0 2v.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '3px' }}>
+            What the AI does with this
+          </p>
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            Your answers seed a brand analysis pipeline: blind-spot detection → DNA synthesis → brand worlds → agent debate → brand system → launch kit. Nothing is asked twice.
+          </p>
+        </div>
+      </div>
+
       {/* Form */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         {/* Main idea */}
         <div>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px', color: 'var(--text-primary)' }}>
-            What are you building? <span style={{ color: 'var(--accent)' }}>*</span>
+          <label htmlFor="idea-input" style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px', color: 'var(--text-primary)' }}>
+            What are you building? <span style={{ color: 'var(--accent)' }} aria-hidden="true">*</span>
+            <span className="sr-only">(required)</span>
           </label>
           <textarea
+            id="idea-input"
             className="input-field"
             rows={4}
             placeholder="An app that helps..."
             value={form.idea}
             onChange={e => handleChange('idea', e.target.value)}
             style={{ resize: 'vertical' }}
+            aria-required="true"
+            aria-describedby="idea-hint"
           />
-          <p style={{ fontSize: '12px', color: 'var(--accent)', marginTop: '6px' }}>
+          <p id="idea-hint" style={{ fontSize: '12px', color: 'var(--accent)', marginTop: '6px' }}>
             Describe the behavior change, not the feature list.
           </p>
         </div>
@@ -102,15 +152,18 @@ export default function IdeaStage() {
         {/* Two columns */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
-              Who is it for? <span style={{ color: 'var(--accent)' }}>*</span>
+            <label htmlFor="audience-input" style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
+              Who is it for? <span style={{ color: 'var(--accent)' }} aria-hidden="true">*</span>
+              <span className="sr-only">(required)</span>
             </label>
             <input
+              id="audience-input"
               className="input-field"
               type="text"
               placeholder="People who..."
               value={form.audience}
               onChange={e => handleChange('audience', e.target.value)}
+              aria-required="true"
             />
           </div>
           <div>
@@ -181,12 +234,12 @@ export default function IdeaStage() {
         </div>
 
         {error && (
-          <p style={{ fontSize: '13px', color: '#DC2626', padding: '10px 14px', background: '#FEF2F2', borderRadius: '8px', border: '1px solid #FECACA' }}>
-            {error}
+          <p role="alert" className="state-error" style={{ fontSize: '13px' }}>
+            <span aria-hidden="true">⚠</span> {error}
           </p>
         )}
 
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             className="btn-primary"
             onClick={handleSubmit}
@@ -208,12 +261,22 @@ export default function IdeaStage() {
 
           <button
             className="btn-outline"
+            onClick={loadAndRunDemo}
+            disabled={loading}
+            style={{ gap: '6px', color: 'var(--accent)', borderColor: 'rgba(217, 83, 30, 0.4)' }}
+            title="Load demo data and immediately run blind spot analysis"
+          >
+            <Zap size={13} />
+            Quick Demo & Run
+          </button>
+
+          <button
+            className="btn-outline"
             onClick={loadDemo}
             disabled={loading}
             style={{ gap: '6px' }}
           >
-            <Zap size={13} />
-            Load demo
+            Fill Demo Form
           </button>
         </div>
       </div>

@@ -11,24 +11,38 @@ const INTENSITY_COLORS = {
   major: '#DC2626',
 };
 
+import MutationSlider from '@/components/MutationSlider';
+import BeforeAfterComparison from '@/components/BeforeAfterComparison';
+import StageEmptyState from '@/components/StageEmptyState';
+
 export default function MutationLabStage() {
   const { project, addMutation, applyMutation, discardMutation, markStageComplete } = useStore();
   const [loading, setLoading] = useState(false);
-  const [variable, setVariable] = useState('Audience');
-  const [newValue, setNewValue] = useState('');
+  const [sliders, setSliders] = useState({ tone: 50, price: 50, feel: 50 });
 
   const { brandSystem, brandDNA, mutations = [] } = project;
-  if (!brandSystem || !brandDNA) return null;
-
   const currentMutation = mutations.find(m => m.status === 'pending');
 
+  if (!brandSystem || !brandDNA) {
+    return <StageEmptyState stage="mutationLab" prerequisiteStage="system" />;
+  }
+
   const handleMutate = async () => {
-    if (!newValue.trim()) return;
+    // Generate a mutation string based on sliders
+    const changes = [];
+    if (sliders.tone < 40) changes.push('much friendlier tone');
+    if (sliders.tone > 60) changes.push('much bolder tone');
+    if (sliders.price < 40) changes.push('more accessible and mass-market');
+    if (sliders.price > 60) changes.push('more premium and exclusive');
+    if (sliders.feel < 40) changes.push('more human and warm');
+    if (sliders.feel > 60) changes.push('more technical and precise');
+
+    const instruction = changes.length > 0 ? changes.join(', ') : 'make it slightly different';
+    
     setLoading(true);
     try {
-      const result = await aiProvider.runBrandMutation(brandSystem, brandDNA, variable, newValue);
+      const result = await aiProvider.runBrandMutation(brandSystem, brandDNA, 'Multiple attributes', instruction);
       addMutation(result);
-      setNewValue('');
     } catch (e) {
       console.error(e);
     } finally {
@@ -60,111 +74,72 @@ export default function MutationLabStage() {
 
       {!currentMutation ? (
         <div className="stage-card" style={{ marginBottom: '40px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>
-                Mutation Variable
-              </label>
-              <select
-                className="input-field"
-                value={variable}
-                onChange={(e) => setVariable(e.target.value)}
-                style={{ cursor: 'pointer' }}
-              >
-                <option value="Audience">Audience</option>
-                <option value="Positioning">Positioning</option>
-                <option value="Personality">Personality</option>
-                <option value="Tone">Tone</option>
-                <option value="Price perception">Price perception</option>
-                <option value="Market">Market</option>
-                <option value="Brand ambition">Brand ambition</option>
-                <option value="Emotional direction">Emotional direction</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>
-                New Value
-              </label>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="e.g. Startup Founders"
-                  value={newValue}
-                  onChange={(e) => setNewValue(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleMutate()}
-                />
-                <button className="btn-primary" onClick={handleMutate} disabled={loading || !newValue.trim()}>
-                  {loading ? (
-                    <span className="animate-spin-slow" style={{ display: 'inline-block', width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%' }} />
-                  ) : (
-                    <>
-                      <TestTube size={14} /> Mutate
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
+          <MutationSlider 
+            labelLeft="Friendly" labelRight="Bold" 
+            value={sliders.tone} onChange={(val) => setSliders({ ...sliders, tone: val })}
+          />
+          <MutationSlider 
+            labelLeft="Accessible" labelRight="Premium" 
+            value={sliders.price} onChange={(val) => setSliders({ ...sliders, price: val })}
+          />
+          <MutationSlider 
+            labelLeft="Human" labelRight="Technical" 
+            value={sliders.feel} onChange={(val) => setSliders({ ...sliders, feel: val })}
+          />
+          
+          <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'flex-end' }}>
+            <button className="btn-primary" onClick={handleMutate} disabled={loading}>
+              {loading ? (
+                <>
+                  <span className="animate-spin-slow" style={{ display: 'inline-block', width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%' }} />
+                  Running Mutation...
+                </>
+              ) : (
+                <>
+                  <TestTube size={14} /> Preview Mutation
+                </>
+              )}
+            </button>
           </div>
         </div>
       ) : (
         <div className="animate-slide-in" style={{ marginBottom: '40px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-            {/* Original */}
-            <div className="stage-card" style={{ opacity: 0.8 }}>
-              <h3 style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '16px' }}>
-                Original Brand
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {currentMutation.changedElements.map((c, i) => (
-                  <div key={i}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{c.element}</span>
-                    <p style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{c.original}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Mutated */}
-            <div className="stage-card" style={{ borderColor: 'var(--accent)', background: 'var(--accent-light)' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--accent)', textTransform: 'uppercase', marginBottom: '16px' }}>
-                Mutated Brand
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {currentMutation.changedElements.map((c, i) => (
-                  <div key={i}>
-                    <span style={{ fontSize: '11px', color: 'var(--accent)', textTransform: 'uppercase' }}>{c.element}</span>
-                    <p style={{ fontSize: '14px', fontWeight: 500, color: '#000' }}>{c.newValue}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+            {currentMutation.changedElements.map((c, i) => (
+              <BeforeAfterComparison
+                key={i}
+                title={c.element}
+                beforeText={c.original}
+                afterText={c.newValue}
+                intensity={c.intensity}
+              />
+            ))}
           </div>
 
-          <div className="dark-hero" style={{ padding: '24px', marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#E5E5E3', marginBottom: '16px' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', borderRadius: '16px', padding: '24px', marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: '16px' }}>
               What Changed?
             </h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
               {currentMutation.changedElements.map((c, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.1)', padding: '6px 12px', borderRadius: '100px' }}>
-                  <span style={{ fontSize: '13px', color: '#FFF' }}>{c.element}</span>
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: `${INTENSITY_COLORS[c.intensity]}15`, border: `1px solid ${INTENSITY_COLORS[c.intensity]}40`, padding: '6px 14px', borderRadius: '100px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{c.element}</span>
                   <ArrowRight size={12} color={INTENSITY_COLORS[c.intensity]} />
-                  <span style={{ fontSize: '11px', fontWeight: 600, color: INTENSITY_COLORS[c.intensity], textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: INTENSITY_COLORS[c.intensity], textTransform: 'uppercase' }}>
                     {c.intensity}
                   </span>
                 </div>
               ))}
               {currentMutation.unchangedElements.map((u, i) => (
-                <div key={'u'+i} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '100px' }}>
-                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{u}</span>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Unchanged</span>
+                <div key={'u'+i} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.03)', border: '1px solid var(--border)', padding: '6px 14px', borderRadius: '100px' }}>
+                  <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>{u}</span>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Unchanged</span>
                 </div>
               ))}
             </div>
             
-            <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-              <p style={{ fontSize: '14px', color: '#E5E5E3', lineHeight: 1.6, fontStyle: 'italic' }}>
+            <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
+              <p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.6, fontStyle: 'italic', fontWeight: 500 }}>
                 "{currentMutation.reasoning}"
               </p>
             </div>
@@ -185,8 +160,8 @@ export default function MutationLabStage() {
         <div style={{ marginBottom: '40px' }}>
           <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px' }}>Version History</h3>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <div className="badge badge-accent">Current v{project.brandSystemHistory.length + 1}</div>
-            {project.brandSystemHistory.map((_, i) => (
+            <div className="badge badge-accent">Current v{(project.brandSystemHistory || []).length + 1}</div>
+            {(project.brandSystemHistory || []).map((_, i) => (
               <div key={i} className="badge badge-muted">v{i + 1} (Archived)</div>
             ))}
           </div>

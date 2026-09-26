@@ -5,6 +5,8 @@ import { aiProvider } from '@/lib/ai-provider';
 import { useState } from 'react';
 import { ArrowRight, Beaker, Check, Zap, AlertTriangle } from 'lucide-react';
 import type { ABExperimentOption } from '@/lib/types';
+import ExperimentBoard from '@/components/ExperimentBoard';
+import StageEmptyState from '@/components/StageEmptyState';
 
 const EXPERIMENT_TYPES = [
   'Tagline A vs B',
@@ -22,7 +24,9 @@ export default function ABExperimentStage() {
   const [valB, setValB] = useState('');
 
   const { brandSystem, abExperiments = [] } = project;
-  if (!brandSystem) return null;
+  if (!brandSystem) {
+    return <StageEmptyState stage="abExperiment" prerequisiteStage="system" />;
+  }
 
   const pendingExperiment = abExperiments.find(e => e.status === 'pending');
 
@@ -183,40 +187,10 @@ export default function ABExperimentStage() {
               Analysis: {pendingExperiment.experimentType}
             </h2>
           </div>
-
-          <div style={{ display: 'flex', gap: '24px', marginBottom: '24px' }}>
-            {renderOptionStats(pendingExperiment.optionA, 'Option A')}
-            {renderOptionStats(pendingExperiment.optionB, 'Option B')}
-          </div>
-
-          <div className="dark-hero" style={{ padding: '32px', marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#E5E5E3', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Zap size={16} color="var(--accent)" /> Key Difference
-            </h3>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-              <div>
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Option A</span>
-                <p style={{ fontSize: '14px', color: '#FFF', fontWeight: 500 }}>{pendingExperiment.optionA.summary}</p>
-              </div>
-              <div>
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Option B</span>
-                <p style={{ fontSize: '14px', color: '#FFF', fontWeight: 500 }}>{pendingExperiment.optionB.summary}</p>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button className="btn-primary" onClick={() => resolveABExperiment(pendingExperiment.id, 'chose_a')}>
-              <Check size={16} /> Choose A
-            </button>
-            <button className="btn-primary" onClick={() => resolveABExperiment(pendingExperiment.id, 'chose_b')}>
-              <Check size={16} /> Choose B
-            </button>
-            <button className="btn-outline" onClick={() => resolveABExperiment(pendingExperiment.id, 'kept_both')} style={{ marginLeft: 'auto' }}>
-              Keep Both
-            </button>
-          </div>
+          <ExperimentBoard 
+            experiment={pendingExperiment}
+            onResolve={(id, decision) => resolveABExperiment(id, decision)}
+          />
         </div>
       )}
 

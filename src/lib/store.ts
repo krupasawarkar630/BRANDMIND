@@ -5,6 +5,23 @@ import { persist } from 'zustand/middleware';
 import type { ProjectState, Stage, IdeaInput, BlindSpotResult, BrandDNA, BrandWorld, BrandBattle, StressTest, BrandSystem, AudienceRoom, BrandMutation, WhatIfResult, RealitySimulatorResult, ABExperiment, TimelineEvent, VisualDNA, GuardianResult, CrisisScenario, CrisisTest, CrisisEvaluation, CultureAdaptation, LaunchKit } from './types';
 import { STAGE_ORDER } from './types';
 
+import {
+  createFullDemoProject,
+  DEMO_IDEA,
+  DEMO_BLIND_SPOTS,
+  DEMO_BRAND_DNA,
+  DEMO_WORLDS,
+  DEMO_BATTLE,
+  DEMO_STRESS_TEST,
+  DEMO_BRAND_SYSTEM,
+  DEMO_AUDIENCE_ROOM,
+  DEMO_VISUAL_DNA,
+  DEMO_REALITY_SIMULATOR,
+  DEMO_GUARDIAN,
+  DEMO_CRISIS_ROOM,
+  DEMO_LAUNCH_KIT
+} from './demo-data';
+
 function makeId(): string {
   return Math.random().toString(36).slice(2, 10);
 }
@@ -48,6 +65,8 @@ function createEmptyProject(): ProjectState {
 interface Store {
   project: ProjectState;
   resetProject: () => void;
+  loadFullDemoProject: (targetStage?: Stage) => void;
+  loadDemoUpToStage: (stage: Stage) => void;
   setIdea: (idea: IdeaInput) => void;
   setBlindSpots: (blindSpots: BlindSpotResult) => void;
   updateBlindSpotStatus: (id: string, status: 'accepted' | 'rejected' | 'explored') => void;
@@ -94,6 +113,54 @@ export const useStore = create<Store>()(
       project: createEmptyProject(),
 
       resetProject: () => set({ project: createEmptyProject() }),
+
+      loadFullDemoProject: (targetStage?: Stage) => {
+        const full = createFullDemoProject();
+        set({
+          project: {
+            ...full,
+            currentStage: targetStage || 'launch',
+            updatedAt: now(),
+          }
+        });
+      },
+
+      loadDemoUpToStage: (targetStage: Stage) => {
+        const full = createFullDemoProject();
+        const targetIdx = STAGE_ORDER.indexOf(targetStage);
+        const completedStages = STAGE_ORDER.slice(0, Math.max(0, targetIdx));
+
+        const base = createEmptyProject();
+        const updated: ProjectState = {
+          ...base,
+          id: 'demo-' + makeId(),
+          idea: DEMO_IDEA,
+          blindSpots: DEMO_BLIND_SPOTS,
+          brandDNA: (targetIdx >= 2) ? DEMO_BRAND_DNA : null,
+          worlds: (targetIdx >= 3) ? DEMO_WORLDS : null,
+          selectedWorldId: (targetIdx >= 3) ? 'world-1' : null,
+          battle: (targetIdx >= 4) ? DEMO_BATTLE : null,
+          stressTest: (targetIdx >= 5) ? DEMO_STRESS_TEST : null,
+          brandSystem: (targetIdx >= 6) ? DEMO_BRAND_SYSTEM : null,
+          audienceRoom: (targetIdx >= 7) ? DEMO_AUDIENCE_ROOM : null,
+          visualDNA: (targetIdx >= 13) ? DEMO_VISUAL_DNA : null,
+          brandDnaLocked: targetIdx >= 15,
+          guardian: (targetIdx >= 16) ? DEMO_GUARDIAN : null,
+          crisisRoom: (targetIdx >= 17) ? DEMO_CRISIS_ROOM : null,
+          launchKit: (targetIdx >= 18) ? DEMO_LAUNCH_KIT : null,
+          completedStages,
+          currentStage: targetStage,
+          updatedAt: now(),
+        };
+
+        if (targetIdx >= 6) {
+          updated.brandSystemHistory = [];
+          updated.timeline = full.timeline;
+          updated.realitySimulator = DEMO_REALITY_SIMULATOR;
+        }
+
+        set({ project: updated });
+      },
 
       setIdea: (idea: IdeaInput) =>
         set(s => ({
@@ -587,13 +654,7 @@ export const useStore = create<Store>()(
           project: { ...s.project, currentStage, updatedAt: now() },
         })),
 
-      canAccessStage: (stage: Stage) => {
-        const { project } = get();
-        const idx = STAGE_ORDER.indexOf(stage);
-        if (idx === 0) return true;
-        const prevStage = STAGE_ORDER[idx - 1];
-        return project.completedStages.includes(prevStage);
-      },
+      canAccessStage: () => true,
     }),
     {
       name: 'brandmind-project-v1',

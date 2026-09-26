@@ -5,6 +5,7 @@ import { aiProvider } from '@/lib/ai-provider';
 import { useState } from 'react';
 import { ArrowRight, AlertOctagon, CheckCircle2, ShieldAlert } from 'lucide-react';
 import type { CrisisTest, CrisisScenario } from '@/lib/types';
+import StageEmptyState from '@/components/StageEmptyState';
 
 function ScoreBar({ label, value }: { label: string; value: number }) {
   return (
@@ -26,7 +27,9 @@ export default function CrisisRoomStage() {
   const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null);
   
   const { brandSystem, crisisRoom } = project;
-  if (!brandSystem) return null;
+  if (!brandSystem) {
+    return <StageEmptyState stage="crisisRoom" prerequisiteStage="system" />;
+  }
 
   const handleEnterCrisisMode = async () => {
     setLoading(true);
@@ -120,58 +123,71 @@ export default function CrisisRoomStage() {
             const isEvaluated = test?.status === 'evaluated' || test?.status === 'saved';
 
             return (
-              <div key={scenario.id} className="stage-card" style={{ marginBottom: '24px', borderColor: test?.status === 'saved' ? '#16A34A' : 'var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '16px' }}>
-                  <ShieldAlert size={20} color="#DC2626" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div key={scenario.id} style={{ marginBottom: '32px', background: 'var(--bg-card)', border: `1px solid ${test?.status === 'saved' ? 'rgba(22, 163, 74, 0.4)' : 'rgba(220, 38, 38, 0.25)'}`, boxShadow: '0 2px 10px rgba(0,0,0,0.04)', borderRadius: '16px', padding: '28px', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '24px', paddingBottom: '20px', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(220, 38, 38, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid rgba(220, 38, 38, 0.2)' }}>
+                    <ShieldAlert size={18} color="#DC2626" />
+                  </div>
                   <div>
-                    <h3 style={{ fontSize: '12px', fontWeight: 700, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: '6px' }}>
                       CRISIS: {scenario.type}
-                    </h3>
-                    <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                    </span>
+                    <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.5, fontWeight: 600 }}>
                       "{scenario.situation}"
                     </p>
                   </div>
                 </div>
 
                 {!isEvaluated ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginLeft: '32px' }}>
-                    <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Choose your brand's response:</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Choose your brand's response:</span>
                     {scenario.options.map(opt => (
                       <button
                         key={opt.id}
-                        className="btn-outline"
-                        style={{ textAlign: 'left', display: 'block', height: 'auto', padding: '16px', whiteSpace: 'normal', position: 'relative' }}
+                        style={{
+                          textAlign: 'left', display: 'block', width: '100%', padding: '20px',
+                          background: 'rgba(0,0,0,0.02)', border: '1px solid var(--border)',
+                          borderRadius: '10px', cursor: 'pointer', color: 'var(--text-primary)', transition: 'all 0.2s'
+                        }}
                         onClick={() => handleOptionSelect(scenario, opt.id, opt.content)}
                         disabled={loading}
+                        onMouseOver={e => { e.currentTarget.style.background = 'var(--accent-light)'; e.currentTarget.style.borderColor = 'var(--accent)'; }}
+                        onMouseOut={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.02)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
                       >
-                        <span style={{ fontSize: '10px', color: 'var(--accent)', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '8px' }}>
-                          Option: {opt.style}
+                        <span style={{ fontSize: '10px', color: 'var(--accent)', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '8px', letterSpacing: '0.05em' }}>
+                          {opt.style}
                         </span>
-                        <span style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                        <span style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.5, display: 'block', fontWeight: 500 }}>
                           "{opt.content}"
                         </span>
                       </button>
                     ))}
                   </div>
                 ) : (
-                  <div style={{ marginLeft: '32px', padding: '20px', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                    <div style={{ marginBottom: '20px' }}>
-                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Your Response</span>
-                      <p style={{ fontSize: '14px', color: 'var(--text-primary)', fontStyle: 'italic' }}>"{test.selectedResponse}"</p>
+                  <div style={{ padding: '24px', background: 'rgba(0,0,0,0.02)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    <div style={{ marginBottom: '24px' }}>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '6px' }}>Your Response</span>
+                      <p style={{ fontSize: '14px', color: 'var(--text-primary)', fontStyle: 'italic', lineHeight: 1.5, fontWeight: 500 }}>"{test.selectedResponse}"</p>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '24px', marginBottom: '24px' }}>
-                      <div>
-                        <ScoreBar label="Brand Alignment" value={test.evaluation!.brandAlignment} />
-                        <ScoreBar label="Trust Preservation" value={test.evaluation!.trustPreservation} />
-                        <ScoreBar label="Voice Alignment" value={test.evaluation!.voiceAlignment} />
-                      </div>
-                      <div style={{ padding: '16px', background: 'var(--bg)', borderRadius: '6px' }}>
-                        <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>AI Assessment</h4>
-                        <p style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                          {test.evaluation!.reasoning}
-                        </p>
-                      </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                      {[
+                        { label: 'Brand Alignment', val: test.evaluation!.brandAlignment },
+                        { label: 'Trust Preservation', val: test.evaluation!.trustPreservation },
+                        { label: 'Voice Alignment', val: test.evaluation!.voiceAlignment },
+                      ].map(m => (
+                        <div key={m.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '16px', borderRadius: '10px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '28px', fontWeight: 800, color: m.val > 80 ? '#16A34A' : m.val > 60 ? '#D97706' : '#DC2626', fontFamily: 'var(--font-mono)', marginBottom: '4px' }}>{m.val}</div>
+                          <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>{m.label}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ padding: '16px', background: 'var(--accent-light)', border: '1px solid var(--accent)', borderRadius: '8px', marginBottom: '24px' }}>
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '8px' }}>AI Assessment</span>
+                      <p style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.5, fontWeight: 500 }}>
+                        {test.evaluation!.reasoning}
+                      </p>
                     </div>
 
                     <div style={{ display: 'flex', gap: '12px' }}>
@@ -185,7 +201,7 @@ export default function CrisisRoomStage() {
                           </button>
                         </>
                       ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#16A34A', fontSize: '13px', fontWeight: 600 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#16A34A', fontSize: '13px', fontWeight: 700 }}>
                           <CheckCircle2 size={16} /> Saved to Decision Timeline
                         </div>
                       )}

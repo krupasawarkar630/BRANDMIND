@@ -4,6 +4,9 @@ import { useStore } from '@/lib/store';
 import { aiProvider } from '@/lib/ai-provider';
 import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
+import DNACanvas from '@/components/DNACanvas';
+import BrandRadar from '@/components/BrandRadar';
+import StageEmptyState from '@/components/StageEmptyState';
 
 function DNACard({ label, content, accent }: { label: string; content: string | string[]; accent?: boolean }) {
   return (
@@ -37,7 +40,9 @@ export default function DNAStage() {
   const dna = project.brandDNA;
   const [loading, setLoading] = useState(false);
 
-  if (!dna) return null;
+  if (!dna) {
+    return <StageEmptyState stage="dna" prerequisiteStage="blindSpots" />;
+  }
 
   const handleNext = async () => {
     if (!project.idea) return;
@@ -87,12 +92,22 @@ export default function DNAStage() {
         <DNACard label="Differentiator" content={dna.differentiator} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '12px' }}>
-        <DNACard label="Personality" content={dna.personality} />
-        <DNACard label="Brand Principles" content={dna.principles} />
+      <div style={{ marginBottom: '32px' }}>
+        <h3 style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase' }}>
+          Brand Personality Constellation
+        </h3>
+        <DNACanvas dna={dna} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+      <div style={{ marginBottom: '32px' }}>
+        <h3 style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase' }}>
+          Brand Dimension Radar
+        </h3>
+        <BrandRadar dna={dna} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '12px' }}>
+        <DNACard label="Brand Principles" content={dna.principles} />
         <DNACard label="Emotional Territory" content={dna.emotionalTerritory} accent />
         <DNACard label="Voice Characteristics" content={dna.voiceCharacteristics} />
       </div>

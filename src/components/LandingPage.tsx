@@ -164,6 +164,27 @@ export default function LandingPage() {
                 <ChevronDown size={14} />
               </button>
             </div>
+
+            {/* AI Context for Judges / First-timers */}
+            <div
+              role="note"
+              aria-label="How this AI works"
+              style={{
+                marginTop: '32px',
+                padding: '16px',
+                background: 'rgba(217,83,30,0.06)',
+                borderRadius: '10px',
+                border: '1px solid rgba(217,83,30,0.18)',
+                maxWidth: '460px'
+              }}
+            >
+              <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                How this AI works
+              </p>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                Instead of generating a static PDF, BRANDMIND acts as an active strategy lab. It extracts tension from your idea, simulates audience reactions, pits specialized AI agents against each other in debate, and outputs a launch-ready brand system.
+              </p>
+            </div>
           </div>
 
           {/* Right: preview card */}

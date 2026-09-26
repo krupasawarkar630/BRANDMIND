@@ -8,9 +8,12 @@ import { ArrowRight, Check } from 'lucide-react';
 
 import BrandWorldCard from '@/components/BrandWorldCard';
 import StageEmptyState from '@/components/StageEmptyState';
+import CompetitorGapMap from '@/components/CompetitorGapMap';
+import { Compass, Sparkles } from 'lucide-react';
 
 export default function WorldsStage() {
   const { project, selectWorld, setBattle, markStageComplete } = useStore();
+  const [activeTab, setActiveTab] = useState<'worlds' | 'gapmap'>('worlds');
   const worlds = project.worlds;
   const [loading, setLoading] = useState(false);
   const selectedId = project.selectedWorldId;
@@ -35,7 +38,7 @@ export default function WorldsStage() {
     <div className="animate-fade-in">
       <div style={{ marginBottom: '8px' }}>
         <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--accent)', letterSpacing: '0.05em' }}>
-          / 04 / BRAND WORLDS
+          / 04 / BRAND WORLDS & COMPETITOR GAP MAP
         </span>
       </div>
 
@@ -46,12 +49,61 @@ export default function WorldsStage() {
         <span className="badge badge-muted" style={{ flexShrink: 0, marginTop: '8px' }}>3 Directions</span>
       </div>
 
-      <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.6, maxWidth: '600px' }}>
-        These are not moodboards. They are strategic worlds with different behaviors, language, and trade-offs.
-        Choose the one you are willing to defend.
+      <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6, maxWidth: '700px' }}>
+        Explore strategic worlds or inspect your position on the interactive Competitor Gap Map. Choose the one you are willing to defend.
       </p>
 
-      <div className="divider" />
+      {/* Tab Switcher */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '32px' }}>
+        <button
+          type="button"
+          onClick={() => setActiveTab('worlds')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '100px',
+            fontSize: '13px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: activeTab === 'worlds' ? 'var(--text-primary)' : 'var(--bg-card)',
+            color: activeTab === 'worlds' ? 'var(--bg)' : 'var(--text-secondary)',
+            border: `1px solid ${activeTab === 'worlds' ? 'var(--text-primary)' : 'var(--border)'}`,
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <Sparkles size={14} /> 3 Brand Worlds
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('gapmap')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '100px',
+            fontSize: '13px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: activeTab === 'gapmap' ? 'var(--text-primary)' : 'var(--bg-card)',
+            color: activeTab === 'gapmap' ? 'var(--bg)' : 'var(--text-secondary)',
+            border: `1px solid ${activeTab === 'gapmap' ? 'var(--text-primary)' : 'var(--border)'}`,
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <Compass size={14} /> Competitor Gap Map & Whitespace
+        </button>
+      </div>
+
+      {activeTab === 'gapmap' ? (
+        <div style={{ marginBottom: '32px' }}>
+          <CompetitorGapMap />
+        </div>
+      ) : (
+        <>
+          <div className="divider" />
 
       {!selectedId ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
@@ -119,6 +171,8 @@ export default function WorldsStage() {
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
           Select a direction to proceed →
         </p>
+      )}
+        </>
       )}
     </div>
   );

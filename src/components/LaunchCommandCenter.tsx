@@ -5,8 +5,9 @@ import { useState } from 'react';
 import {
   Copy, Check, Pencil, RefreshCw, Lock, Unlock,
   Download, FileJson, FileText, Share2, Zap,
-  Palette, Megaphone, MessageSquare, Globe, CornerDownRight, X,
+  Palette, Megaphone, MessageSquare, Globe, CornerDownRight, X, Sparkles
 } from 'lucide-react';
+import BrandConstitutionModal from '@/components/BrandConstitutionModal';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -298,6 +299,7 @@ export default function LaunchCommandCenter() {
   const { brandSystem: system, brandDNA: dna, launchKit, visualDNA } = project;
   const [overrides, setOverrides] = useState<Record<string, string | string[]>>({});
   const [exportCopied, setExportCopied] = useState(false);
+  const [showConstitution, setShowConstitution] = useState(false);
 
   if (!system || !dna || !launchKit) return null;
 
@@ -599,13 +601,20 @@ export default function LaunchCommandCenter() {
             <span style={{ fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', marginRight: '4px' }}>
               EXPORT ›
             </span>
+            <ExportBtn icon={<Sparkles size={12} color="var(--accent)" />} label="Brand Constitution (Full Artifact)" onClick={() => setShowConstitution(true)} active />
             <ExportBtn icon={exportCopied ? <Check size={12} /> : <FileText size={12} />} label={exportCopied ? 'Copied!' : 'Copy Markdown'} onClick={handleCopyAll} active={exportCopied} />
             <ExportBtn icon={<FileJson size={12} />} label="Export JSON" onClick={handleExportJSON} />
-            <ExportBtn icon={<Download size={12} />} label="Download PDF" onClick={() => window.print()} />
+            <ExportBtn icon={<Download size={12} />} label="Print / PDF" onClick={() => window.print()} />
             <ExportBtn icon={<Share2 size={12} />} label="Share Link" onClick={() => { navigator.clipboard.writeText(`https://brandmind.app/share/${project.id}`); alert('Share link copied!'); }} />
           </div>
         </div>
       </div>
+
+      {/* Brand Constitution Modal */}
+      <BrandConstitutionModal
+        isOpen={showConstitution}
+        onClose={() => setShowConstitution(false)}
+      />
 
       {/* ══════════════════════════════════════════════════════════════════
           SECTION GROUPS

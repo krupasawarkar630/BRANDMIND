@@ -102,6 +102,10 @@ interface Store {
   evaluateCrisisResponse: (test: CrisisTest, evaluation: CrisisEvaluation) => void;
   saveCrisisResponse: (testId: string) => void;
   setLaunchKit: (lk: LaunchKit) => void;
+  setCompetitorMap: (map: any) => void;
+  setBrandAnalyzerResult: (result: any) => void;
+  rollbackToTimelineSnapshot: (eventId: string) => void;
+  branchFromTimelineSnapshot: (eventId: string, branchName: string) => void;
   markStageComplete: (stage: Stage) => void;
   setCurrentStage: (stage: Stage) => void;
   canAccessStage: (stage: Stage) => boolean;
@@ -631,6 +635,75 @@ export const useStore = create<Store>()(
         set(s => ({
           project: { ...s.project, launchKit, updatedAt: now() },
         })),
+
+      setCompetitorMap: (competitorMap: any) =>
+        set(s => ({
+          project: { ...s.project, competitorMap, updatedAt: now() },
+        })),
+
+      setBrandAnalyzerResult: (brandAnalyzerResult: any) =>
+        set(s => ({
+          project: { ...s.project, brandAnalyzerResult, updatedAt: now() },
+        })),
+
+      rollbackToTimelineSnapshot: (eventId: string) =>
+        set(s => {
+          const event = s.project.timeline.find(e => e.id === eventId);
+          if (!event || !event.snapshot) return s;
+
+          const snapshot = event.snapshot as any;
+          return {
+            project: {
+              ...s.project,
+              ...(snapshot.brandDNA ? { brandDNA: snapshot.brandDNA } : {}),
+              ...(snapshot.brandSystem ? { brandSystem: snapshot.brandSystem } : {}),
+              timeline: [
+                ...s.project.timeline,
+                {
+                  id: `evt-${makeId()}`,
+                  stage: 'Experiment Replay',
+                  decision: `Rolled back to decision: "${event.decision.slice(0, 40)}..."`,
+                  reason: `User initiated experiment replay rollback to timestamp ${event.timestamp}`,
+                  source: 'USER',
+                  timestamp: now()
+                }
+              ],
+              updatedAt: now()
+            }
+          };
+        }),
+
+      branchFromTimelineSnapshot: (eventId: string, branchName: string) =>
+        set(s => {
+          const event = s.project.timeline.find(e => e.id === eventId);
+          if (!event) return s;
+
+          const snapshot = (event.snapshot as any) || (s.project.brandSystem ? { brandSystem: s.project.brandSystem } : {});
+          const newVariant = snapshot.brandSystem ? {
+            ...snapshot.brandSystem,
+            name: `${branchName} (Branch)`,
+            tagline: `${snapshot.brandSystem.tagline || ''} [Branch from ${event.stage}]`
+          } : s.project.brandSystem;
+
+          return {
+            project: {
+              ...s.project,
+              brandVariants: newVariant ? [...s.project.brandVariants, newVariant] : s.project.brandVariants,
+              timeline: [
+                ...s.project.timeline,
+                {
+                  id: `evt-${makeId()}`,
+                  stage: 'Brand Branch',
+                  decision: `Created branch "${branchName}" from decision "${event.decision.slice(0, 35)}..."`,
+                  reason: `Forked strategic exploration branch`,
+                  source: 'USER',
+                  timestamp: now()
+                }
+              ],
+              updatedAt: now()
+            }
+          };
+        }),
 
       markStageComplete: (stage: Stage) =>
         set(s => {

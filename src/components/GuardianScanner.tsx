@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { ShieldCheck, ShieldAlert, ShieldX, ChevronDown, ChevronRight, Wand2, CheckCircle } from 'lucide-react';
 import type { GuardianResult, GuardianViolation } from '@/lib/types';
+import EvidenceDrilldown from '@/components/EvidenceDrilldown';
 
 function ScoreRing({ value, label, color }: { value: number; label: string; color?: string }) {
   const ringColor = color || (value >= 80 ? '#16A34A' : value >= 60 ? '#D97706' : '#DC2626');
@@ -131,17 +132,24 @@ export default function GuardianScanner({
         </div>
 
         <div style={{ flex: 1 }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: '6px',
-            padding: '6px 14px', borderRadius: '100px',
-            border: `1px solid ${overallStatus.color}`,
-            background: 'var(--bg-card)',
-            color: overallStatus.color,
-            fontSize: '12px', fontWeight: 700, letterSpacing: '0.05em',
-            marginBottom: '12px'
-          }}>
-            {result.consistencyScore >= 85 ? <ShieldCheck size={14} /> : result.consistencyScore >= 60 ? <ShieldAlert size={14} /> : <ShieldX size={14} />}
-            {overallStatus.label}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '6px 14px', borderRadius: '100px',
+              border: `1px solid ${overallStatus.color}`,
+              background: 'var(--bg-card)',
+              color: overallStatus.color,
+              fontSize: '12px', fontWeight: 700, letterSpacing: '0.05em',
+            }}>
+              {result.consistencyScore >= 85 ? <ShieldCheck size={14} /> : result.consistencyScore >= 60 ? <ShieldAlert size={14} /> : <ShieldX size={14} />}
+              {overallStatus.label}
+            </div>
+            <EvidenceDrilldown
+              score={result.consistencyScore}
+              label="Verified Proof"
+              category="Guardian Consistency"
+              size="sm"
+            />
           </div>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, fontWeight: 500 }}>
             {result.summary}

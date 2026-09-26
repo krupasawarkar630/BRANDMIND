@@ -10,6 +10,7 @@ const TRANSFORMATIONS = [
 ];
 
 import BeforeAfterComparison from '@/components/BeforeAfterComparison';
+import WhatIfVisualizer from '@/components/WhatIfVisualizer';
 import StageEmptyState from '@/components/StageEmptyState';
 
 export default function WhatIfMachineStage() {
@@ -83,44 +84,13 @@ export default function WhatIfMachineStage() {
           </div>
         </div>
       ) : (
-        <div className="animate-slide-in" style={{ marginBottom: '40px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>
-              Transformation: <span style={{ color: 'var(--accent)' }}>{whatIfResult.transformation}</span>
-            </h2>
-            <button className="btn-outline" onClick={() => discardWhatIf(whatIfResult.id)}>
-              <XCircle size={14} /> Close
-            </button>
-          </div>
-
-          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', borderRadius: '16px', padding: '32px', marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: '24px' }}>
-              What Changed?
-            </h3>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {Object.entries(whatIfResult.changes).map(([key, change]) => (
-                <BeforeAfterComparison
-                  key={key}
-                  title={change.element}
-                  beforeText={change.original}
-                  afterText={change.newValue}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button className="btn-primary" onClick={() => applyWhatIf(whatIfResult.id)}>
-              <CheckCircle size={16} /> Apply Transformation
-            </button>
-            <button className="btn-outline" onClick={() => saveWhatIfAsVariant(whatIfResult.id)}>
-              <Save size={16} /> Save as Variant
-            </button>
-            <button className="btn-outline" onClick={() => discardWhatIf(whatIfResult.id)} style={{ marginLeft: 'auto' }}>
-              <XCircle size={16} /> Discard
-            </button>
-          </div>
+        <div style={{ marginBottom: '40px' }}>
+          <WhatIfVisualizer
+            result={whatIfResult}
+            onApply={applyWhatIf}
+            onSaveVariant={saveWhatIfAsVariant}
+            onDiscard={discardWhatIf}
+          />
         </div>
       )}
 

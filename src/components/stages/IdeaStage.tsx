@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { aiProvider } from '@/lib/ai-provider';
-import type { IdeaInput } from '@/lib/types';
-import { ArrowRight, Zap } from 'lucide-react';
+import type { IdeaInput, BrandAnalyzerResult } from '@/lib/types';
+import { ArrowRight, Zap, FileText, PlusCircle } from 'lucide-react';
+import ExistingBrandAnalyzer from '@/components/ExistingBrandAnalyzer';
 
 const DEMO_DATA: IdeaInput = {
   idea: "An app that helps college students find teammates for hackathons, side projects, and startup ideas",
@@ -18,6 +19,7 @@ const DEMO_DATA: IdeaInput = {
 
 export default function IdeaStage() {
   const { setIdea, markStageComplete, setBrandDNA } = useStore();
+  const [activeTab, setActiveTab] = useState<'new' | 'analyze'>('new');
   const [form, setForm] = useState<IdeaInput>({
     idea: '',
     audience: '',
@@ -73,12 +75,35 @@ export default function IdeaStage() {
     }
   };
 
+  const handleAdoptAnalyzed = async (analyzed: BrandAnalyzerResult) => {
+    setLoading(true);
+    try {
+      const generatedIdea: IdeaInput = {
+        idea: analyzed.extractedPositioning,
+        audience: analyzed.impliedAudience,
+        industry: 'Technology / Platform',
+        problem: analyzed.coreDna.coreProblem,
+        alternatives: 'Traditional legacy platforms & fragmented agencies',
+        tone: analyzed.extractedTone.join(', '),
+      };
+
+      setIdea(generatedIdea);
+      const bs = await aiProvider.detectBlindSpots(generatedIdea);
+      useStore.getState().setBlindSpots(bs);
+      markStageComplete('idea');
+    } catch (e) {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="animate-fade-in" style={{ maxWidth: '800px' }}>
+    <div className="animate-fade-in" style={{ maxWidth: '900px' }}>
       {/* Stage header */}
       <div style={{ marginBottom: '8px' }}>
         <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--accent)', letterSpacing: '0.05em' }}>
-          / 01 / IDEA INTAKE
+          / 01 / IDEA & BRAND INTAKE
         </span>
       </div>
 
@@ -89,11 +114,59 @@ export default function IdeaStage() {
         <span className="badge badge-accent" style={{ flexShrink: 0, marginTop: '8px' }}>Context Seed</span>
       </div>
 
-      <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.6 }}>
-        No pitch deck polish required. Give the lab enough material to find the tension worth owning.
+      <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>
+        Build a new brand from scratch or deconstruct your existing live marketing copy using real NLP extraction.
       </p>
 
-      <div className="divider" />
+      {/* Mode Switcher Tabs */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '32px' }}>
+        <button
+          type="button"
+          onClick={() => setActiveTab('new')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '100px',
+            fontSize: '13px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: activeTab === 'new' ? 'var(--text-primary)' : 'var(--bg-card)',
+            color: activeTab === 'new' ? 'var(--bg)' : 'var(--text-secondary)',
+            border: `1px solid ${activeTab === 'new' ? 'var(--text-primary)' : 'var(--border)'}`,
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <PlusCircle size={14} /> New Brand Concept
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('analyze')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '100px',
+            fontSize: '13px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: activeTab === 'analyze' ? 'var(--text-primary)' : 'var(--bg-card)',
+            color: activeTab === 'analyze' ? 'var(--bg)' : 'var(--text-secondary)',
+            border: `1px solid ${activeTab === 'analyze' ? 'var(--text-primary)' : 'var(--border)'}`,
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <FileText size={14} /> Analyze Existing Live Brand Copy
+        </button>
+      </div>
+
+      {activeTab === 'analyze' ? (
+        <ExistingBrandAnalyzer onAdoptDna={handleAdoptAnalyzed} />
+      ) : (
+        <>
+          <div className="divider" />
 
       {/* AI Context — helps judges understand what happens next */}
       <div
@@ -280,6 +353,8 @@ export default function IdeaStage() {
           </button>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

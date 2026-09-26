@@ -179,6 +179,27 @@ export interface WhatIfChange {
   description?: string;
 }
 
+export interface WhatIfAudienceReaction {
+  persona: string;
+  sentiment: 'positive' | 'neutral' | 'skeptical';
+  quote: string;
+  affinityDelta: number;
+}
+
+export interface WhatIfPositioningImpact {
+  metric: string;
+  before: number;
+  after: number;
+  delta: number;
+}
+
+export interface WhatIfBranchingPath {
+  branchName: string;
+  tradeOff: string;
+  likelihood: string;
+  strategicUpside: string;
+}
+
 export interface WhatIfResult {
   id: string;
   transformation: string;
@@ -190,8 +211,109 @@ export interface WhatIfResult {
     visual: WhatIfChange;
     audiencePerception: WhatIfChange;
   };
+  affectedDNA?: string[];
+  audienceReactions?: WhatIfAudienceReaction[];
+  positioningImpact?: WhatIfPositioningImpact[];
+  risks?: string[];
+  opportunities?: string[];
+  confidence?: number;
+  recommendedAction?: string;
+  branchingPaths?: WhatIfBranchingPath[];
   mutatedBrand: BrandSystem;
   status: 'pending' | 'applied' | 'saved_as_variant' | 'discarded';
+}
+
+// ── Evidence-Backed Scoring & Brand Memory ──────────────────
+
+export interface EvidenceItem {
+  id: string;
+  source: 'simulation' | 'stress_test' | 'blind_spot' | 'audience' | 'user_decision' | 'guardian' | 'market_signal';
+  title: string;
+  description: string;
+  impactScore: number; // e.g. +15 or -10
+  timestamp?: string;
+  referenceId?: string;
+}
+
+export interface EvidenceScore {
+  score: number;
+  category: string;
+  confidence: number;
+  evidenceCount: number;
+  items: EvidenceItem[];
+  rationale: string;
+}
+
+export interface BrandMemoryContext {
+  lockedRules: Array<{
+    rule: string;
+    lockedAt: string;
+    stage: string;
+    rationale: string;
+  }>;
+  decisions: TimelineEvent[];
+  rejectedBlindSpots: string[];
+  previousMutations: BrandMutation[];
+  guardianViolations: GuardianViolation[];
+  stressTestWeaknesses: string[];
+}
+
+// ── Competitor Gap Map ──────────────────────────────────────
+
+export interface Competitor {
+  id: string;
+  name: string;
+  tagline: string;
+  claimedPositioning: string;
+  targetAudience: string;
+  strengths: string[];
+  weaknesses: string[];
+  // User input coordinates or AI inferred (0 to 100)
+  xCoord: number; // e.g. Innovation / Pragmatic
+  yCoord: number; // e.g. Enterprise / Consumer
+  isUserInput: boolean;
+}
+
+export interface CompetitorGapMapData {
+  xAxisLabel: string;
+  yAxisLabel: string;
+  competitors: Competitor[];
+  brandCoords: { x: number; y: number };
+  whitespaceZones: Array<{
+    name: string;
+    description: string;
+    opportunityScore: number;
+    recommendedAngle: string;
+    coordinates: { x: number; y: number };
+  }>;
+  aiInferences: Array<{
+    competitorName: string;
+    inferredVulnerability: string;
+    confidence: number;
+  }>;
+}
+
+// ── Existing Brand Analyzer ─────────────────────────────────
+
+export interface BrandAnalyzerResult {
+  sourceTextLength: number;
+  extractedPositioning: string;
+  extractedTone: string[];
+  impliedAudience: string;
+  coreDna: {
+    coreProblem: string;
+    valueProposition: string;
+    differentiator: string;
+    personality: string[];
+  };
+  detectedInconsistencies: Array<{
+    element: string;
+    observation: string;
+    severity: 'low' | 'medium' | 'high';
+    recommendation: string;
+  }>;
+  readinessScore: number;
+  rawPastedCopy: string;
 }
 
 export interface SimulatorScenario {
@@ -246,6 +368,7 @@ export interface TimelineEvent {
   source: 'AI' | 'USER';
   timestamp: string;
   affectedElements?: string[];
+  snapshot?: Partial<BrandDNA | BrandSystem>;
 }
 
 export interface RealitySimulatorResult {
@@ -409,6 +532,8 @@ export interface ProjectState {
   guardian: GuardianResult | null;
   crisisRoom: CrisisRoomState | null;
   launchKit: LaunchKit | null;
+  competitorMap?: CompetitorGapMapData | null;
+  brandAnalyzerResult?: BrandAnalyzerResult | null;
   completedStages: Stage[];
 }
 

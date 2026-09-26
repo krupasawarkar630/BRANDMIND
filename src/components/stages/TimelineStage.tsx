@@ -3,6 +3,7 @@
 import { useStore } from '@/lib/store';
 import { ArrowRight, GitCommit, Search, GitBranch } from 'lucide-react';
 import DecisionTimeline from '@/components/DecisionTimeline';
+import BrandExperimentReplay from '@/components/BrandExperimentReplay';
 import StageEmptyState from '@/components/StageEmptyState';
 
 export default function TimelineStage() {
@@ -51,6 +52,7 @@ export default function TimelineStage() {
         </div>
       ) : (
         <div style={{ marginBottom: '40px' }}>
+          <BrandExperimentReplay events={timeline} />
           <DecisionTimeline events={timeline} />
         </div>
       )}

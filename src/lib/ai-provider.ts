@@ -28,6 +28,12 @@ import type {
   CultureAdaptation,
   LaunchKitItem,
   LaunchKit,
+  BrandMemoryContext,
+  EvidenceScore,
+  EvidenceItem,
+  Competitor,
+  CompetitorGapMapData,
+  BrandAnalyzerResult
 } from './types';
 
 // ── Utility ─────────────────────────────────────────────────
@@ -57,23 +63,26 @@ function pickN<T>(arr: T[], n: number, seed: string): T[] {
 
 // ── AIProvider Interface ────────────────────────────────────
 export interface AIProvider {
-  detectBlindSpots(idea: IdeaInput): Promise<BlindSpotResult>;
-  synthesizeBrandDNA(idea: IdeaInput, blindSpots?: BlindSpot[]): Promise<BrandDNA>;
-  generateBrandWorlds(dna: BrandDNA, idea: IdeaInput): Promise<BrandWorld[]>;
+  detectBlindSpots(idea: IdeaInput, memory?: BrandMemoryContext): Promise<BlindSpotResult>;
+  synthesizeBrandDNA(idea: IdeaInput, blindSpots?: BlindSpot[], memory?: BrandMemoryContext): Promise<BrandDNA>;
+  generateBrandWorlds(dna: BrandDNA, idea: IdeaInput, memory?: BrandMemoryContext): Promise<BrandWorld[]>;
   runBrandBattle(worlds: BrandWorld[], dna: BrandDNA, selectedWorldId: string): Promise<BrandBattle>;
   runStressTest(world: BrandWorld, dna: BrandDNA): Promise<StressTest>;
   generateBrandSystem(world: BrandWorld, dna: BrandDNA, battle: BrandBattle): Promise<BrandSystem>;
   runBrandMutation(system: BrandSystem, dna: BrandDNA, variable: string, newValue: string): Promise<BrandMutation>;
-  runWhatIfMachine(system: BrandSystem, dna: BrandDNA, transformation: string): Promise<WhatIfResult>;
+  runWhatIfMachine(system: BrandSystem, dna: BrandDNA, transformation: string, memory?: BrandMemoryContext): Promise<WhatIfResult>;
   runRealitySimulator(project: any): Promise<RealitySimulatorResult>;
   runABExperiment(system: BrandSystem, type: string, valA: string, valB: string): Promise<ABExperiment>;
   runAudienceRoom(system: BrandSystem, dna: BrandDNA): Promise<AudienceRoom>;
   generateVisualDNA(system: BrandSystem, dna: BrandDNA, world: BrandWorld): Promise<VisualDNA>;
   generateCultureAdaptation(system: BrandSystem, dna: BrandDNA, market: string): Promise<CultureAdaptation>;
-  checkConsistency(content: string, system: BrandSystem, dna: BrandDNA, isLocked?: boolean): Promise<GuardianResult>;
+  checkConsistency(content: string, system: BrandSystem, dna: BrandDNA, isLocked?: boolean, memory?: BrandMemoryContext): Promise<GuardianResult>;
   generateCrisisScenarios(system: BrandSystem): Promise<CrisisScenario[]>;
   evaluateCrisisResponse(system: BrandSystem, situation: string, responseContent: string): Promise<CrisisEvaluation>;
-  generateLaunchKit(system: BrandSystem, world: BrandWorld, dna: BrandDNA): Promise<LaunchKit>;
+  generateLaunchKit(system: BrandSystem, world: BrandWorld, dna: BrandDNA, memory?: BrandMemoryContext): Promise<LaunchKit>;
+  analyzeExistingBrand(pastedCopy: string): Promise<BrandAnalyzerResult>;
+  generateCompetitorGapMap(idea: IdeaInput, competitors: Competitor[]): Promise<CompetitorGapMapData>;
+  calculateEvidenceScore(scoreCategory: string, project: any): EvidenceScore;
 }
 
 // ── Mock AI Provider ────────────────────────────────────────
@@ -577,8 +586,13 @@ export class MockAIProvider implements AIProvider {
     };
   }
 
-  async runWhatIfMachine(system: BrandSystem, dna: BrandDNA, transformation: string): Promise<WhatIfResult> {
-    await this.delay(2000);
+  async runWhatIfMachine(
+    system: BrandSystem,
+    dna: BrandDNA,
+    transformation: string,
+    memory?: BrandMemoryContext
+  ): Promise<WhatIfResult> {
+    await this.delay(1800);
     const seed = system.brandName + transformation;
     const h = hash(seed);
 
@@ -590,6 +604,11 @@ export class MockAIProvider implements AIProvider {
     let visualNew = 'Strong geometry';
     let taglineNew = 'The standard is broken. We fixed it.';
     let audienceNew = 'More ambitious, Less approachable';
+    let affectedDNA = ['Personality Archetype', 'Voice Calibration', 'Headline Hierarchy'];
+    let risks = ['May polarize cautious buyers', 'Requires higher brand conviction'];
+    let opportunities = ['Dramatically higher conversion among core evangelists', 'Commanding organic share-of-voice'];
+    let confidence = 86 + (h % 10);
+    let recommendedAction = `Pilot this ${transformation.toLowerCase()} expression across top-of-funnel landing pages before altering core product touchpoints.`;
 
     if (transformation === 'BOLDER') {
       personalityNew = 'Challenger, Aggressive, Sharp';
@@ -597,24 +616,44 @@ export class MockAIProvider implements AIProvider {
       visualNew = 'High contrast, Stark typography, Red accents';
       taglineNew = `Don't just ${dna.differentiator.split(' ')[0]}. Own it.`;
       audienceNew = 'More polarizing, higher urgency';
+      affectedDNA = ['Personality Spectrum', 'Differentiator Assertion', 'Hero Statement'];
+      risks = ['Alienates conservative legacy buyers', 'Requires strict internal discipline'];
+      opportunities = ['Cuts through noisy competitive advertising', 'Instantly memorable positioning wedge'];
+      confidence = 91;
+      recommendedAction = 'Deploy on campaign landing pages and hero video copy to test conversion uplift.';
     } else if (transformation === 'PREMIUM') {
       personalityNew = 'Exclusive, Refined, Assured';
       toneNew = 'Understated, Confident, Brief';
       visualNew = 'Generous white space, Serif typography, Monochrome';
       taglineNew = `The standard for ${dna.targetUser.split(' ')[0]}.`;
       audienceNew = 'Higher trust, higher perceived price';
+      affectedDNA = ['Value Proposition Framing', 'Visual Restraint', 'Pricing Power'];
+      risks = ['Perceived as inaccessible or slow to adopt', 'Demands immaculate product polish'];
+      opportunities = ['Unlocks 2.5x higher ACV / pricing tiers', 'Accelerates enterprise executive buy-in'];
+      confidence = 89;
+      recommendedAction = 'Refine typography system to elevated monochrome and restrict copy density.';
     } else if (transformation === 'HUMAN') {
       personalityNew = 'Empathetic, Warm, Honest';
       toneNew = 'Conversational, Vulnerable';
       visualNew = 'Soft shapes, Warm colors, Authentic photography';
       taglineNew = `Finally, a way to ${dna.differentiator.split(' ')[0]} that feels right.`;
       audienceNew = 'More approachable, highly relatable';
+      affectedDNA = ['Emotional Territory', 'Microcopy & CTAs', 'Community Voice'];
+      risks = ['Can blur perceived technical rigor if over-softened', 'Harder to command premium B2B pricing'];
+      opportunities = ['Drastically increases viral referral loops', 'Reduces onboarding friction and churn'];
+      confidence = 88;
+      recommendedAction = 'Infuse first-person founder perspective into onboarding emails and documentation.';
     } else if (transformation === 'TECHNICAL') {
       personalityNew = 'Precise, Logical, Systemic';
       toneNew = 'Data-driven, Jargon-fluent, Direct';
       visualNew = 'Code-like monospace, Dark mode, Blue/Green accents';
       taglineNew = `The infrastructure for ${dna.differentiator.split(' ')[0]}.`;
       audienceNew = 'Highly credible to engineers, alienating to beginners';
+      affectedDNA = ['Product Architecture Claims', 'Feature Specification', 'Developer Ergonomics'];
+      risks = ['Steep learning curve for non-technical buyers', 'Slower sales cycle without business champion'];
+      opportunities = ['Achieves near-zero churn with technical practitioners', 'Defense against feature copycats'];
+      confidence = 94;
+      recommendedAction = 'Include architecture schematics and deterministic benchmarks directly on homepage.';
     } else {
       personalityNew = `Infused with ${transformation.toLowerCase()}`;
       toneNew = `Adapted for ${transformation.toLowerCase()}`;
@@ -624,6 +663,52 @@ export class MockAIProvider implements AIProvider {
     mutatedBrand.voice = toneNew.split(',').map(s => s.trim());
     mutatedBrand.tagline = taglineNew;
     mutatedBrand.visualDirection = { ...system.visualDirection, color: visualNew };
+
+    // Audience reactions
+    const audienceReactions = [
+      {
+        persona: 'The Core Adopter',
+        sentiment: 'positive' as const,
+        quote: `"This ${transformation.toLowerCase()} angle speaks directly to the frustration I deal with every week."`,
+        affinityDelta: +18
+      },
+      {
+        persona: 'The Cautious Evaluator',
+        sentiment: transformation === 'BOLDER' ? ('skeptical' as const) : ('neutral' as const),
+        quote: `"It's distinct, though I want to see verifiable proof before committing my entire workflow."`,
+        affinityDelta: transformation === 'BOLDER' ? -6 : +4
+      },
+      {
+        persona: 'The Industry Veteran',
+        sentiment: 'positive' as const,
+        quote: `"Finally someone stops using generic boilerplate language and takes a definitive stand."`,
+        affinityDelta: +14
+      }
+    ];
+
+    // Positioning impact metrics
+    const positioningImpact = [
+      { metric: 'Differentiation Edge', before: 72, after: transformation === 'BOLDER' ? 94 : 88, delta: transformation === 'BOLDER' ? +22 : +16 },
+      { metric: 'Clarity Speed', before: 78, after: transformation === 'HUMAN' ? 92 : 84, delta: transformation === 'HUMAN' ? +14 : +6 },
+      { metric: 'Enterprise Authority', before: 68, after: transformation === 'PREMIUM' ? 93 : transformation === 'TECHNICAL' ? 96 : 74, delta: transformation === 'PREMIUM' ? +25 : +6 },
+      { metric: 'Organic Memorability', before: 65, after: 89, delta: +24 }
+    ];
+
+    // Branching strategic paths
+    const branchingPaths = [
+      {
+        branchName: `Direct ${transformation} Path`,
+        tradeOff: 'Commits entire core brand immediately',
+        likelihood: '74% Success',
+        strategicUpside: 'Dominates the primary category narrative within 6 months'
+      },
+      {
+        branchName: `Sub-Brand / Lab Variant`,
+        tradeOff: 'Splits marketing bandwidth across 2 expressions',
+        likelihood: '88% Success',
+        strategicUpside: 'Tests radical messaging without risking main brand equity'
+      }
+    ];
 
     return {
       id: `whatif-${h}`,
@@ -660,6 +745,14 @@ export class MockAIProvider implements AIProvider {
           newValue: audienceNew,
         }
       },
+      affectedDNA,
+      audienceReactions,
+      positioningImpact,
+      risks,
+      opportunities,
+      confidence,
+      recommendedAction,
+      branchingPaths,
       mutatedBrand,
       status: 'pending'
     };
@@ -970,7 +1063,8 @@ export class MockAIProvider implements AIProvider {
     content: string,
     system: BrandSystem,
     dna: BrandDNA,
-    isLocked: boolean = false
+    isLocked: boolean = false,
+    memory?: BrandMemoryContext
   ): Promise<GuardianResult> {
     await this.delay(1400);
 
@@ -987,61 +1081,89 @@ export class MockAIProvider implements AIProvider {
     const violations: GuardianViolation[] = [];
     let deductions = 0;
 
-    if (isLocked) {
+    // 1. Check against Locked Brand DNA Rules & Brand Memory
+    if (isLocked || (memory && memory.lockedRules && memory.lockedRules.length > 0)) {
+      if (memory && memory.lockedRules) {
+        for (const lr of memory.lockedRules) {
+          const ruleLower = lr.rule.toLowerCase();
+          if (ruleLower.includes('no jargon') && (contentLower.includes('leverage') || contentLower.includes('synergy') || contentLower.includes('paradigm'))) {
+            violations.push({
+              id: `vio-locked-${hash(lr.rule)}`,
+              expected: `Strict compliance with rule locked on ${lr.lockedAt}: "${lr.rule}"`,
+              generated: `Used restricted corporate jargon`,
+              violation: `Direct conflict with locked principle: "${lr.rule}"`,
+              fixedContent: content.replace(/leverage/gi, 'use').replace(/synergy/gi, 'coordination').replace(/paradigm/gi, 'model'),
+              status: 'pending'
+            });
+            deductions += 20;
+          }
+        }
+      }
+
       if (contentLower.includes('corporate') || contentLower.includes('leverage')) {
         violations.push({
           id: `vio-${hash(content + 'tone')}`,
           expected: `${system.personality[0]} + ${system.voice[0]}`,
-          generated: 'Corporate + overly formal',
-          violation: 'Tone mismatch against Locked Brand DNA',
-          fixedContent: content.replace(/leverage/gi, 'use').replace(/corporate/gi, 'startup'),
+          generated: 'Corporate / overly generic phrasing',
+          violation: 'Tone mismatch against Locked Brand DNA rules',
+          fixedContent: content.replace(/leverage/gi, 'build with').replace(/corporate/gi, 'focused'),
           status: 'pending'
         });
         deductions += 15;
       }
     }
 
+    // 2. Generic Phrases Check
     genericPhrases.forEach(phrase => {
       if (contentLower.includes(phrase)) {
+        let replacement = 'use';
+        if (phrase === 'seamless') replacement = 'direct';
+        if (phrase === 'innovative') replacement = dna.personality[0]?.toLowerCase() || 'focused';
+        if (phrase === 'all-in-one') replacement = 'purpose-built';
+        if (phrase === 'cutting-edge') replacement = 'modern';
+        if (phrase === 'unlock') replacement = 'access';
+        if (phrase === 'empower') replacement = 'enable';
+
         violations.push({
           id: `vio-${hash(content + phrase)}`,
           expected: `Distinctive vocabulary from ${system.brandName}`,
-          generated: `Generic phrase: "${phrase}"`,
-          violation: `Uses generic phrase: "${phrase}" — this could be written by any brand in the category`,
-          fixedContent: content.replace(new RegExp(phrase, 'gi'), '[better word]'),
+          generated: `Generic trope: "${phrase}"`,
+          violation: `Uses generic phrase: "${phrase}" — weakens brand positioning and sounds like an unpositioned competitor`,
+          fixedContent: content.replace(new RegExp(phrase, 'gi'), replacement),
           status: 'pending'
         });
         deductions += 8;
       }
     });
 
-    // Check for brand voice characteristics
+    // 3. Brand Voice Signals
     const brandVoiceTerms = dna.voiceCharacteristics.map(v => v.toLowerCase().split(' ')[0]);
     const hasVoiceSignals = brandVoiceTerms.some(t => contentLower.includes(t));
 
     if (!hasVoiceSignals) {
+      const voiceAdjective = dna.voiceCharacteristics[0] || 'Clear';
       violations.push({
         id: `vio-${hash(content + 'voice')}`,
-        expected: `Sounds like ${system.brandName}`,
-        generated: 'Generic brand voice',
-        violation: `Does not sound like ${system.brandName} — the voice characteristics are absent`,
-        fixedContent: `[Rewrite with ${dna.voiceCharacteristics[0]} tone] ${content}`,
+        expected: `Sounds distinctly ${dna.voiceCharacteristics.join(', ')}`,
+        generated: 'Passive / indistinct brand voice',
+        violation: `Lacks distinctive voice characteristics of ${system.brandName}`,
+        fixedContent: `${content.trim().replace(/\.$/, '')} — engineered with ${voiceAdjective.toLowerCase()} clarity for ${dna.targetUser.split(' ')[0]}.`,
         status: 'pending'
       });
       deductions += 10;
     }
 
-    // Check if it references audience
+    // 4. Target Audience Specificity
     const audienceFirstWords = dna.targetUser.split(' ').slice(0, 3).map(w => w.toLowerCase());
     const referencesAudience = audienceFirstWords.some(w => contentLower.includes(w));
 
     if (!referencesAudience) {
       violations.push({
         id: `vio-${hash(content + 'audience')}`,
-        expected: `Directly references ${dna.targetUser}`,
-        generated: 'Abstract audience benefit',
-        violation: `The audience benefit is abstract rather than observable`,
-        fixedContent: content.trim() + ` (for ${dna.targetUser})`,
+        expected: `Grounded in specific user needs: ${dna.targetUser}`,
+        generated: 'Abstract / unanchored value claim',
+        violation: `The copy makes abstract claims without anchoring to ${dna.targetUser}`,
+        fixedContent: `${content.trim()} Designed explicitly for ${dna.targetUser}.`,
         status: 'pending'
       });
       deductions += 7;
@@ -1058,11 +1180,10 @@ export class MockAIProvider implements AIProvider {
     else if (consistencyScore < 70) label = 'NEEDS A NUDGE';
     else if (consistencyScore < 85) label = 'ON TRACK';
 
-    const rewrites = [
-      `${system.tagline.split('.')[0]}. ${dna.differentiator.split(' ').slice(0, 10).join(' ')}.`,
-      `For ${dna.targetUser.split(' ').slice(0, 4).join(' ')}: ${dna.differentiator}`,
-      `${dna.coreProblem.split('.')[0]}. ${system.brandName} changes that.`,
-    ];
+    let suggestedRewrite = `${system.tagline.split('.')[0]}. Built specifically for ${dna.targetUser} to solve ${dna.coreProblem.split('.')[0].toLowerCase()}.`;
+    if (violations.length > 0 && violations[0].fixedContent) {
+      suggestedRewrite = violations[0].fixedContent;
+    }
 
     return {
       content,
@@ -1072,11 +1193,266 @@ export class MockAIProvider implements AIProvider {
       positioningMatch,
       label,
       summary: violations.length > 1
-        ? `The content is optimistic, but it could be swapped into almost any startup homepage. The current system is more precise, human, and action-oriented.`
-        : `The content is closely aligned with the brand system. Small refinements can push it from good to ownable.`,
+        ? `The content has strong ideas but contains ${violations.length} violations against your Brand DNA and memory. Applying the auto-fixes will align it with your strategic posture.`
+        : `The content is closely aligned with the brand system. Minor refinements applied to preserve brand equity.`,
       violations,
-      suggestedRewrite: rewrites[h % rewrites.length],
+      suggestedRewrite,
       status: 'complete',
+    };
+  }
+
+  async analyzeExistingBrand(pastedCopy: string): Promise<BrandAnalyzerResult> {
+    await this.delay(1600);
+    const text = pastedCopy.trim();
+    const words = text.split(/\s+/).filter(w => w.length > 0);
+    const lower = text.toLowerCase();
+
+    // Frequency analysis and keyword extraction
+    const hasEnterprise = lower.includes('enterprise') || lower.includes('security') || lower.includes('compliance') || lower.includes('scale');
+    const hasConsumer = lower.includes('simple') || lower.includes('daily') || lower.includes('fun') || lower.includes('friends') || lower.includes('students');
+    const hasTechnical = lower.includes('api') || lower.includes('developer') || lower.includes('code') || lower.includes('pipeline') || lower.includes('architecture');
+
+    // Extract core problem
+    let extractedProblem = 'Fragmented workflows and lack of cohesive intelligence across existing tools.';
+    if (lower.includes('problem') || lower.includes('struggle') || lower.includes('hard to') || lower.includes('waste')) {
+      const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+      const problemSentence = sentences.find(s => s.toLowerCase().includes('hard') || s.toLowerCase().includes('waste') || s.toLowerCase().includes('problem') || s.toLowerCase().includes('struggle'));
+      if (problemSentence) extractedProblem = problemSentence.trim();
+    }
+
+    // Extract positioning
+    let extractedPositioning = text.split(/[.!?\n]+/)[0]?.trim() || 'Modern intelligent platform';
+    if (extractedPositioning.length < 15) {
+      extractedPositioning = text.slice(0, 80).trim();
+    }
+
+    // Tone extraction
+    const toneTraits: string[] = [];
+    if (hasTechnical) toneTraits.push('Technical', 'Rigorous');
+    if (hasEnterprise) toneTraits.push('Authoritative', 'Structured');
+    if (hasConsumer) toneTraits.push('Approachable', 'Dynamic');
+    if (toneTraits.length === 0) toneTraits.push('Pragmatic', 'Direct', 'Modern');
+
+    // Audience extraction
+    let impliedAudience = hasEnterprise
+      ? 'Enterprise leaders and strategic operations teams'
+      : hasTechnical
+      ? 'Engineers, technical founders, and product architects'
+      : 'Modern builders, creators, and high-growth founders';
+
+    // Personality extraction
+    const personality = [
+      toneTraits[0] || 'Precise',
+      toneTraits[1] || 'Visionary',
+      'Determined'
+    ];
+
+    // Detect copy inconsistencies
+    const detectedInconsistencies = [];
+    if (lower.includes('all-in-one') && lower.includes('simple')) {
+      detectedInconsistencies.push({
+        element: 'Clarity vs Scope',
+        observation: 'Copy claims to be both an "all-in-one" platform and "simple", creating cognitive friction for evaluators.',
+        severity: 'medium' as const,
+        recommendation: 'Anchor on a single wedge problem rather than promising universal coverage.'
+      });
+    }
+
+    if (lower.includes('cutting-edge') || lower.includes('revolutionary') || lower.includes('unlock')) {
+      detectedInconsistencies.push({
+        element: 'Generic Buzzwords',
+        observation: 'Presence of generic SaaS marketing filler words reduces credibility with high-intent buyers.',
+        severity: 'high' as const,
+        recommendation: 'Replace abstract verbs with concrete mechanical outcomes.'
+      });
+    }
+
+    const readinessScore = Math.min(95, Math.max(60, 88 - detectedInconsistencies.length * 10 + (words.length > 50 ? 5 : -5)));
+
+    return {
+      sourceTextLength: words.length,
+      extractedPositioning,
+      extractedTone: toneTraits,
+      impliedAudience,
+      coreDna: {
+        coreProblem: extractedProblem,
+        valueProposition: `${extractedPositioning}. Purpose-built to eliminate ${extractedProblem.toLowerCase().slice(0, 40)}.`,
+        differentiator: `Autonomous intelligence that preserves strategic fidelity rather than superficial templates`,
+        personality
+      },
+      detectedInconsistencies,
+      readinessScore,
+      rawPastedCopy: text
+    };
+  }
+
+  async generateCompetitorGapMap(idea: IdeaInput, competitors: Competitor[]): Promise<CompetitorGapMapData> {
+    await this.delay(1500);
+
+    const defaultCompetitors: Competitor[] = competitors.length > 0 ? competitors : [
+      {
+        id: 'comp-1',
+        name: 'Legacy Enterprise Suite',
+        tagline: 'The monolithic standard',
+        claimedPositioning: 'Comprehensive end-to-end management for global conglomerates',
+        targetAudience: 'Fortune 500 Procurement',
+        strengths: ['Brand awareness', 'Broad vendor compliance'],
+        weaknesses: ['Bloated interface', 'Rigid templates', 'Slow execution'],
+        xCoord: 25,
+        yCoord: 85,
+        isUserInput: false
+      },
+      {
+        id: 'comp-2',
+        name: 'Generic AI Generator',
+        tagline: 'Instant marketing in 1 click',
+        claimedPositioning: 'Superficial copy and template generation for small businesses',
+        targetAudience: 'Solopreneurs & casual marketers',
+        strengths: ['Low cost', 'Fast generation'],
+        weaknesses: ['Hallucinates generic filler', 'Zero strategic memory', 'Inconsistent tone'],
+        xCoord: 80,
+        yCoord: 20,
+        isUserInput: false
+      },
+      {
+        id: 'comp-3',
+        name: 'Manual Agency Consultancies',
+        tagline: 'Bespoke 6-month brand strategy',
+        claimedPositioning: 'High-touch executive workshops and slide decks',
+        targetAudience: 'Chief Marketing Officers',
+        strengths: ['Deep qualitative research', 'High polish'],
+        weaknesses: ['Extremely expensive ($100k+)', 'Static PDFs that get forgotten immediately'],
+        xCoord: 30,
+        yCoord: 35,
+        isUserInput: false
+      }
+    ];
+
+    // Our brand coordinates: High Innovation / Edge (X: 85), High Strategic Rigor / Precision (Y: 80)
+    const brandCoords = { x: 82, y: 78 };
+
+    const whitespaceZones = [
+      {
+        name: 'Autonomous Strategic Intelligence',
+        description: 'Uncontested zone: Continuous brand memory + rigorous multi-agent consensus without manual agency overhead.',
+        opportunityScore: 94,
+        recommendedAngle: `Own the intersection of deterministic brand physics and dynamic multi-agent stress testing.`,
+        coordinates: { x: 80, y: 80 }
+      },
+      {
+        name: 'Real-Time Guardian Governance',
+        description: 'Automated policy enforcement that prevents brand drift before copy ever goes live.',
+        opportunityScore: 88,
+        recommendedAngle: `Position as the deterministic operating system for brand consistency.`,
+        coordinates: { x: 65, y: 85 }
+      }
+    ];
+
+    const aiInferences = defaultCompetitors.map(c => ({
+      competitorName: c.name,
+      inferredVulnerability: c.weaknesses[0] ? `Vulnerable to: ${c.weaknesses[0]}` : 'Lacks deterministic brand memory and cross-stage consistency',
+      confidence: 88 + (hash(c.name) % 10)
+    }));
+
+    return {
+      xAxisLabel: 'Tactical Generation → Strategic Architecture',
+      yAxisLabel: 'Superficial / Casual → Rigorous / Institutional',
+      competitors: defaultCompetitors,
+      brandCoords,
+      whitespaceZones,
+      aiInferences
+    };
+  }
+
+  calculateEvidenceScore(scoreCategory: string, project: any): EvidenceScore {
+    const dna = project?.brandDNA;
+    const timeline = project?.timeline || [];
+    const guardian = project?.guardian;
+    const stressTest = project?.stressTest;
+    const audience = project?.audienceRoom;
+
+    const items: EvidenceItem[] = [];
+    let base = 70;
+
+    if (dna) {
+      items.push({
+        id: 'ev-dna',
+        source: 'user_decision',
+        title: 'Brand DNA Foundation Established',
+        description: `Positioned around "${dna.differentiator || 'Core Differentiator'}" with ${dna.personality?.length || 3} verified traits.`,
+        impactScore: +15,
+        timestamp: dna.updatedAt || new Date().toISOString()
+      });
+      base += 15;
+    }
+
+    if (project?.brandDnaLocked) {
+      items.push({
+        id: 'ev-lock',
+        source: 'user_decision',
+        title: 'Immutable Brand DNA Lock Active',
+        description: 'Core positioning principles locked against arbitrary drifts.',
+        impactScore: +12,
+        timestamp: new Date().toISOString()
+      });
+      base += 12;
+    }
+
+    if (timeline.length > 0) {
+      items.push({
+        id: 'ev-timeline',
+        source: 'user_decision',
+        title: `${timeline.length} Strategic Decisions Recorded`,
+        description: `Full audit trail tracking pivots, A/B experiments, and mutations.`,
+        impactScore: Math.min(15, timeline.length * 3),
+        timestamp: timeline[0]?.timestamp
+      });
+      base += Math.min(15, timeline.length * 3);
+    }
+
+    if (stressTest?.issues) {
+      const fixedCount = stressTest.issues.length;
+      items.push({
+        id: 'ev-stress',
+        source: 'stress_test',
+        title: `Generic-Proofing Stress Test Analyzed`,
+        description: `Identified and resolved ${fixedCount} generic positioning vulnerabilities.`,
+        impactScore: +10
+      });
+      base += 10;
+    }
+
+    if (guardian) {
+      items.push({
+        id: 'ev-guardian',
+        source: 'guardian',
+        title: `Consistency Guardian Verified`,
+        description: `Scanned copy with a score of ${guardian.consistencyScore}% consistency against memory.`,
+        impactScore: guardian.consistencyScore > 80 ? +12 : +5
+      });
+      base += guardian.consistencyScore > 80 ? 12 : 5;
+    }
+
+    if (audience?.reactions) {
+      items.push({
+        id: 'ev-audience',
+        source: 'audience',
+        title: `Multi-Persona Audience Validation`,
+        description: `${audience.reactions.length} distinct audience personas tested with consensus agreement.`,
+        impactScore: +8
+      });
+      base += 8;
+    }
+
+    const finalScore = Math.min(98, Math.max(50, base));
+
+    return {
+      score: finalScore,
+      category: scoreCategory,
+      confidence: 92,
+      evidenceCount: items.length,
+      items,
+      rationale: `Score synthesized from ${items.length} verifiable signals across your project's decisions, stress tests, guardian scans, and locked principles.`
     };
   }
 
@@ -1141,16 +1517,21 @@ export class MockAIProvider implements AIProvider {
   async generateLaunchKit(
     system: BrandSystem,
     world: BrandWorld,
-    dna: BrandDNA
+    dna: BrandDNA,
+    memory?: BrandMemoryContext
   ): Promise<LaunchKit> {
     await this.delay(1800);
+
+    const lockedNote = memory?.lockedRules?.length
+      ? `\n\n*(Constrained by ${memory.lockedRules.length} locked DNA principles)*`
+      : '';
 
     const items: LaunchKitItem[] = [
       {
         id: 'elevator',
         title: 'Elevator Pitch',
         subtitle: '30-second version',
-        content: `${system.brandName} helps ${dna.targetUser} ${dna.differentiator}. Most tools add more options. We make the right one obvious. That's the whole product.`,
+        content: `${system.brandName} helps ${dna.targetUser} ${dna.differentiator}. Most tools add more options. We make the right one obvious. That's the whole product.${lockedNote}`,
         channel: 'Investor / networking conversations',
       },
       {
